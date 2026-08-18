@@ -251,29 +251,44 @@ struct FloorPlan {
     }
 
     /// After rotating walls independently their corners no longer meet, so pull
-    /// each pair of near-touching endpoints onto the intersection of the two walls.
-    private static func weldCorners(_ segments: inout [Segment], threshold: Double = 0.4) {
+    /// each endpoint onto the intersection with its nearest neighboring endpoint.
+    ///
+    /// Each endpoint picks its own nearest match across *all* other wall endpoints,
+    /// rather than only welding pairs already closer than a small fixed cutoff.
+    /// Oblique joints — a wall meeting its neighbors at a non-square angle — tend
+    /// to have more scan noise right at the corner than a plain 90° joint, so a
+    /// tight absolute threshold left those gaps unwelded.
+    private static func weldCorners(_ segments: inout [Segment], threshold: Double = 0.6) {
         let wallIndices = segments.indices.filter { segments[$0].category == .wall }
         guard wallIndices.count > 1 else { return }
 
-        for first in 0..<(wallIndices.count - 1) {
-            for second in (first + 1)..<wallIndices.count {
-                let a = wallIndices[first]
-                let b = wallIndices[second]
+        for a in wallIndices {
+            for isEndOfA in [false, true] {
+                let pointA = isEndOfA ? segments[a].end : segments[a].start
+                var bestDistance = threshold
+                var bestCorner: CGPoint?
+                var bestB = -1
+                var bestIsEndOfB = false
 
-                for (useEndOfA, useEndOfB) in [(true, true), (true, false), (false, true), (false, false)] {
-                    let pointA = useEndOfA ? segments[a].end : segments[a].start
-                    let pointB = useEndOfB ? segments[b].end : segments[b].start
-                    guard hypot(pointA.x - pointB.x, pointA.y - pointB.y) <= threshold,
-                          let corner = intersection(of: segments[a], and: segments[b]),
-                          // Near-parallel walls intersect far away; that is not a corner.
-                          hypot(corner.x - pointA.x, corner.y - pointA.y) <= threshold * 2
-                    else { continue }
-
-                    if useEndOfA { segments[a].end = corner } else { segments[a].start = corner }
-                    if useEndOfB { segments[b].end = corner } else { segments[b].start = corner }
-                    break
+                for b in wallIndices where b != a {
+                    for isEndOfB in [false, true] {
+                        let pointB = isEndOfB ? segments[b].end : segments[b].start
+                        let distance = hypot(pointA.x - pointB.x, pointA.y - pointB.y)
+                        guard distance < bestDistance,
+                              let corner = intersection(of: segments[a], and: segments[b]),
+                              // Near-parallel walls intersect far away; that is not a corner.
+                              hypot(corner.x - pointA.x, corner.y - pointA.y) <= threshold * 2
+                        else { continue }
+                        bestDistance = distance
+                        bestCorner = corner
+                        bestB = b
+                        bestIsEndOfB = isEndOfB
+                    }
                 }
+
+                guard let corner = bestCorner else { continue }
+                if isEndOfA { segments[a].end = corner } else { segments[a].start = corner }
+                if bestIsEndOfB { segments[bestB].end = corner } else { segments[bestB].start = corner }
             }
         }
     }
