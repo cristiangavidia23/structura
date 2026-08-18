@@ -9,8 +9,11 @@
 /* Begin PBXBuildFile section */
 		039F6D7201A15CB8C4973DB6 /* CSVExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34EE01AB83E39C24C3CD2677 /* CSVExporter.swift */; };
 		068AF9DFCA660426EF2D1FA2 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001C02F9A7CB5D73E04A3065 /* ActivityView.swift */; };
+		107B7208591424E8291D3979 /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBAF40F0AD07E417D2B06870 /* PurchaseManager.swift */; };
 		365746E1E0A968D133531640 /* RoomMorphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC42345E067FCF74492A29B /* RoomMorphView.swift */; };
 		3F1398B8AEF92E7B2EE13FA5 /* PDFExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67C5CD0BC15A87A0AB74E5BD /* PDFExporter.swift */; };
+		4D6F9E0DF437D1BCB2E91811 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = C2A3EEBCDBE2E8B8FE50ECCC /* RevenueCat */; };
+		568BD69819C863FE264B56B9 /* BlueprintBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B01C9230240DE02C68C495B /* BlueprintBackdrop.swift */; };
 		5B832F4D8AC146DCEF4A83A2 /* StructuraApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FE458FE3C3369BCAE73208A /* StructuraApp.swift */; };
 		5DB9295BAB09B8C15E80AA8A /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83AE0C3A1CE9AA9883A95E13 /* HomeView.swift */; };
 		63B3680B29F4C12AD8271A1D /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7951C17A6CBF4A1CC20EE401 /* CaptureView.swift */; };
@@ -18,6 +21,7 @@
 		9D6E08814FE36A6948F9D9A8 /* FloorPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8539560292F05A011D44BB /* FloorPlan.swift */; };
 		AB10C18997BD74B42E6505FB /* ScanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ED71AB772D38FF5E9A434E4 /* ScanStore.swift */; };
 		ADE8A7A6FCAAC237C267A16C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F2D1BB617A4B198C03673AC /* SettingsView.swift */; };
+		B7138A37BE4DB4F202E22065 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3E15B20D478AC5FAE663090 /* PaywallView.swift */; };
 		C63D263F638DF8C85B22E6EE /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1537BB48F60772F82768EE23 /* Theme.swift */; };
 		E4F256CC6E3FCA46E0BCAF9C /* ResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA76854C563F8F4C3BC05788 /* ResultView.swift */; };
 		E8646A4C4193364906670CDD /* RoomCaptureRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = E78D94B24D2AB18DA74DD4D3 /* RoomCaptureRepresentable.swift */; };
@@ -38,13 +42,27 @@
 		731115085003FD13639169C5 /* UnitSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnitSystem.swift; sourceTree = "<group>"; };
 		7951C17A6CBF4A1CC20EE401 /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
 		83AE0C3A1CE9AA9883A95E13 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		8B01C9230240DE02C68C495B /* BlueprintBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlueprintBackdrop.swift; sourceTree = "<group>"; };
 		8F1DB39A49C2AFE040165840 /* ScanRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanRecord.swift; sourceTree = "<group>"; };
 		9F2D1BB617A4B198C03673AC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		ABC42345E067FCF74492A29B /* RoomMorphView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomMorphView.swift; sourceTree = "<group>"; };
 		E78D94B24D2AB18DA74DD4D3 /* RoomCaptureRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomCaptureRepresentable.swift; sourceTree = "<group>"; };
+		EBAF40F0AD07E417D2B06870 /* PurchaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseManager.swift; sourceTree = "<group>"; };
 		EE8539560292F05A011D44BB /* FloorPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorPlan.swift; sourceTree = "<group>"; };
+		F3E15B20D478AC5FAE663090 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		FA76854C563F8F4C3BC05788 /* ResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		DC1E4EE5444A406BF1BFAC45 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4D6F9E0DF437D1BCB2E91811 /* RevenueCat in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		040B5D96D26638835C116FB3 /* Home */ = {
@@ -74,6 +92,7 @@
 				072063EF48EA3ABB7C901146 /* Export */,
 				040B5D96D26638835C116FB3 /* Home */,
 				D7D263DBC0E8F391D3FCA008 /* Models */,
+				9893396A99C1584B150A48E5 /* Purchases */,
 				F408807251F71C1810098317 /* Result */,
 				69F32EDC05DDA951ADB030BD /* Settings */,
 				AB28847A67A190B855FDEF1F /* Support */,
@@ -103,6 +122,16 @@
 				3E24924C76C28845B801B82C /* Structura.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		9893396A99C1584B150A48E5 /* Purchases */ = {
+			isa = PBXGroup;
+			children = (
+				8B01C9230240DE02C68C495B /* BlueprintBackdrop.swift */,
+				F3E15B20D478AC5FAE663090 /* PaywallView.swift */,
+				EBAF40F0AD07E417D2B06870 /* PurchaseManager.swift */,
+			);
+			path = Purchases;
 			sourceTree = "<group>";
 		};
 		AB28847A67A190B855FDEF1F /* Support */ = {
@@ -151,6 +180,7 @@
 			buildConfigurationList = 34411EAD97752BC777D79D54 /* Build configuration list for PBXNativeTarget "Structura" */;
 			buildPhases = (
 				A5103B49B596CC7CB1E757EB /* Sources */,
+				DC1E4EE5444A406BF1BFAC45 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -158,6 +188,7 @@
 			);
 			name = Structura;
 			packageProductDependencies = (
+				C2A3EEBCDBE2E8B8FE50ECCC /* RevenueCat */,
 			);
 			productName = Structura;
 			productReference = 3E24924C76C28845B801B82C /* Structura.app */;
@@ -187,6 +218,9 @@
 			);
 			mainGroup = 288E45137437B954BB989EEB;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				23749C8B14861E3C3571A38A /* XCRemoteSwiftPackageReference "purchases-ios" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 822905426509DEDBF6120DBF /* Products */;
 			projectDirPath = "";
@@ -203,12 +237,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				068AF9DFCA660426EF2D1FA2 /* ActivityView.swift in Sources */,
+				568BD69819C863FE264B56B9 /* BlueprintBackdrop.swift in Sources */,
 				039F6D7201A15CB8C4973DB6 /* CSVExporter.swift in Sources */,
 				63B3680B29F4C12AD8271A1D /* CaptureView.swift in Sources */,
 				9D6E08814FE36A6948F9D9A8 /* FloorPlan.swift in Sources */,
 				5DB9295BAB09B8C15E80AA8A /* HomeView.swift in Sources */,
 				8C8AB3517A1182CFA187900F /* MeasurementsView.swift in Sources */,
 				3F1398B8AEF92E7B2EE13FA5 /* PDFExporter.swift in Sources */,
+				B7138A37BE4DB4F202E22065 /* PaywallView.swift in Sources */,
+				107B7208591424E8291D3979 /* PurchaseManager.swift in Sources */,
 				E4F256CC6E3FCA46E0BCAF9C /* ResultView.swift in Sources */,
 				E8646A4C4193364906670CDD /* RoomCaptureRepresentable.swift in Sources */,
 				365746E1E0A968D133531640 /* RoomMorphView.swift in Sources */,
@@ -407,6 +444,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		23749C8B14861E3C3571A38A /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C2A3EEBCDBE2E8B8FE50ECCC /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 23749C8B14861E3C3571A38A /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 42F76DC8D4B251A65D8FBB21 /* Project object */;
 }

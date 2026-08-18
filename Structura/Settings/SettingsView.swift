@@ -2,6 +2,9 @@ import SwiftUI
 
 struct SettingsView: View {
     @AppStorage("unitSystem") private var unitSystemRaw = UnitSystem.metric.rawValue
+    @EnvironmentObject private var purchases: PurchaseManager
+    @State private var isRestoring = false
+    @State private var restoreMessage: String?
 
     private var unitSystem: Binding<UnitSystem> {
         Binding(
@@ -21,6 +24,30 @@ struct SettingsView: View {
                 .pickerStyle(.segmented)
                 .listRowBackground(Theme.cardBackground)
                 .padding(.vertical, 4)
+            }
+
+            Section("Suscripción") {
+                HStack {
+                    Text("Estado")
+                        .foregroundStyle(Theme.ink)
+                    Spacer()
+                    Text(purchases.isPremium ? "Premium" : "Gratis")
+                        .foregroundStyle(purchases.isPremium ? Theme.accent : Theme.ink.opacity(0.5))
+                }
+                .listRowBackground(Theme.cardBackground)
+
+                Button {
+                    restore()
+                } label: {
+                    if isRestoring {
+                        ProgressView()
+                    } else {
+                        Text("Restaurar compras")
+                            .foregroundStyle(Theme.ink)
+                    }
+                }
+                .disabled(isRestoring)
+                .listRowBackground(Theme.cardBackground)
             }
 
             Section("Soporte") {
@@ -49,6 +76,30 @@ struct SettingsView: View {
         .background(Theme.paper)
         .navigationTitle("Ajustes")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Restaurar compras", isPresented: restoreMessagePresented) {
+            Button("Cerrar", role: .cancel) { restoreMessage = nil }
+        } message: {
+            Text(restoreMessage ?? "")
+        }
+    }
+
+    private var restoreMessagePresented: Binding<Bool> {
+        Binding(get: { restoreMessage != nil }, set: { if !$0 { restoreMessage = nil } })
+    }
+
+    private func restore() {
+        isRestoring = true
+        Task {
+            defer { isRestoring = false }
+            do {
+                try await purchases.restore()
+                restoreMessage = purchases.isPremium
+                    ? "Tu suscripción Premium fue restaurada."
+                    : "No encontramos una compra activa para restaurar."
+            } catch {
+                restoreMessage = error.localizedDescription
+            }
+        }
     }
 
     private var supportMailURL: URL? {
@@ -67,5 +118,6 @@ struct SettingsView: View {
 #Preview {
     NavigationStack {
         SettingsView()
+            .environmentObject(PurchaseManager.shared)
     }
 }

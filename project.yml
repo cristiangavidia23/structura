@@ -5,6 +5,11 @@ options:
     iOS: "17.0"
   createIntermediateGroups: true
 
+packages:
+  RevenueCat:
+    url: https://github.com/RevenueCat/purchases-ios
+    from: 5.0.0
+
 targets:
   Structura:
     type: application
@@ -12,6 +17,9 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: Structura
+    dependencies:
+      - package: RevenueCat
+        product: RevenueCat
     info:
       path: Structura/Info.plist
       properties:

@@ -3,9 +3,15 @@ import RoomPlan
 
 struct HomeView: View {
     @StateObject private var store = ScanStore()
+    @EnvironmentObject private var purchases: PurchaseManager
     @State private var isPresentingCapture = false
+    @State private var isPresentingPaywall = false
     @State private var isSaving = false
     @State private var saveErrorMessage: String?
+
+    /// v1 pricing: the first scan is free (export is what's gated, not scanning
+    /// it); any scan beyond that needs premium.
+    private static let freeScanCount = 1
 
     private let columns = [GridItem(.adaptive(minimum: 150), spacing: 16)]
 
@@ -75,7 +81,17 @@ struct HomeView: View {
                     .accessibilityLabel("Ajustes")
                 }
             }
+            .sheet(isPresented: $isPresentingPaywall) {
+                PaywallView(backgroundPlan: latestPlan)
+            }
         }
+    }
+
+    /// Most recent scan's geometry, for the paywall's decorative backdrop.
+    private var latestPlan: FloorPlan? {
+        guard let latest = store.scans.first,
+              let room = store.capturedRoom(for: latest) else { return nil }
+        return FloorPlan(room: room)
     }
 
     private var errorPresented: Binding<Bool> {
@@ -87,7 +103,11 @@ struct HomeView: View {
 
     private var newScanButton: some View {
         Button {
-            isPresentingCapture = true
+            if store.scans.count >= Self.freeScanCount && !purchases.isPremium {
+                isPresentingPaywall = true
+            } else {
+                isPresentingCapture = true
+            }
         } label: {
             Image(systemName: "plus")
                 .font(.system(size: 22, weight: .semibold))

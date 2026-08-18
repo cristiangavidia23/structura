@@ -6,9 +6,11 @@ struct ResultView: View {
     let store: ScanStore
 
     @AppStorage("unitSystem") private var unitSystemRaw = UnitSystem.metric.rawValue
+    @EnvironmentObject private var purchases: PurchaseManager
     @State private var mode: Mode = .dollhouse
     @State private var shareURL: URL?
     @State private var isPresentingShare = false
+    @State private var isPresentingPaywall = false
 
     private enum Mode: String, CaseIterable {
         case dollhouse = "3D"
@@ -93,22 +95,25 @@ struct ResultView: View {
                 ActivityView(items: [shareURL])
             }
         }
+        .sheet(isPresented: $isPresentingPaywall) {
+            PaywallView(backgroundPlan: plan)
+        }
     }
 
     private func exportMenu(for plan: FloorPlan) -> some View {
         Menu {
             Button {
-                share(PDFExporter.export(scan: scan, plan: plan, unitSystem: unitSystem))
+                exportOrPaywall { share(PDFExporter.export(scan: scan, plan: plan, unitSystem: unitSystem)) }
             } label: {
                 Label("Plano acotado (PDF)", systemImage: "doc.richtext")
             }
             Button {
-                share(store.usdzURL(for: scan))
+                exportOrPaywall { share(store.usdzURL(for: scan)) }
             } label: {
                 Label("Modelo 3D (USDZ)", systemImage: "cube")
             }
             Button {
-                share(CSVExporter.export(scan: scan, plan: plan))
+                exportOrPaywall { share(CSVExporter.export(scan: scan, plan: plan)) }
             } label: {
                 Label("Medidas (CSV)", systemImage: "tablecells")
             }
@@ -116,6 +121,15 @@ struct ResultView: View {
             Image(systemName: "square.and.arrow.up")
         }
         .accessibilityLabel("Exportar")
+    }
+
+    /// Every export format is premium — v1's free tier lets you scan, not export.
+    private func exportOrPaywall(_ export: () -> Void) {
+        guard purchases.isPremium else {
+            isPresentingPaywall = true
+            return
+        }
+        export()
     }
 
     private func share(_ url: URL?) {
