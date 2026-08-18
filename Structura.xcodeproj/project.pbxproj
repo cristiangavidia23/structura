@@ -17,6 +17,7 @@
 		8C8AB3517A1182CFA187900F /* MeasurementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06959A398729A01CD14F0E23 /* MeasurementsView.swift */; };
 		9D6E08814FE36A6948F9D9A8 /* FloorPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8539560292F05A011D44BB /* FloorPlan.swift */; };
 		AB10C18997BD74B42E6505FB /* ScanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ED71AB772D38FF5E9A434E4 /* ScanStore.swift */; };
+		ADE8A7A6FCAAC237C267A16C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F2D1BB617A4B198C03673AC /* SettingsView.swift */; };
 		C63D263F638DF8C85B22E6EE /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1537BB48F60772F82768EE23 /* Theme.swift */; };
 		E4F256CC6E3FCA46E0BCAF9C /* ResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA76854C563F8F4C3BC05788 /* ResultView.swift */; };
 		E8646A4C4193364906670CDD /* RoomCaptureRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = E78D94B24D2AB18DA74DD4D3 /* RoomCaptureRepresentable.swift */; };
@@ -38,6 +39,7 @@
 		7951C17A6CBF4A1CC20EE401 /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
 		83AE0C3A1CE9AA9883A95E13 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		8F1DB39A49C2AFE040165840 /* ScanRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanRecord.swift; sourceTree = "<group>"; };
+		9F2D1BB617A4B198C03673AC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		ABC42345E067FCF74492A29B /* RoomMorphView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomMorphView.swift; sourceTree = "<group>"; };
 		E78D94B24D2AB18DA74DD4D3 /* RoomCaptureRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomCaptureRepresentable.swift; sourceTree = "<group>"; };
 		EE8539560292F05A011D44BB /* FloorPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorPlan.swift; sourceTree = "<group>"; };
@@ -73,6 +75,7 @@
 				040B5D96D26638835C116FB3 /* Home */,
 				D7D263DBC0E8F391D3FCA008 /* Models */,
 				F408807251F71C1810098317 /* Result */,
+				69F32EDC05DDA951ADB030BD /* Settings */,
 				AB28847A67A190B855FDEF1F /* Support */,
 			);
 			path = Structura;
@@ -84,6 +87,14 @@
 				25FA356C2323911EF663E402 /* Structura */,
 				822905426509DEDBF6120DBF /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		69F32EDC05DDA951ADB030BD /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				9F2D1BB617A4B198C03673AC /* SettingsView.swift */,
+			);
+			path = Settings;
 			sourceTree = "<group>";
 		};
 		822905426509DEDBF6120DBF /* Products */ = {
@@ -203,6 +214,7 @@
 				365746E1E0A968D133531640 /* RoomMorphView.swift in Sources */,
 				EC6B4FD1E91A04911C370B23 /* ScanRecord.swift in Sources */,
 				AB10C18997BD74B42E6505FB /* ScanStore.swift in Sources */,
+				ADE8A7A6FCAAC237C267A16C /* SettingsView.swift in Sources */,
 				5B832F4D8AC146DCEF4A83A2 /* StructuraApp.swift in Sources */,
 				C63D263F638DF8C85B22E6EE /* Theme.swift in Sources */,
 				F40F67FAC6756A4521982309 /* UnitSystem.swift in Sources */,

@@ -65,6 +65,16 @@ struct HomeView: View {
             } message: {
                 Text(saveErrorMessage ?? "")
             }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        SettingsView()
+                    } label: {
+                        Image(systemName: "gearshape")
+                    }
+                    .accessibilityLabel("Ajustes")
+                }
+            }
         }
     }
 
