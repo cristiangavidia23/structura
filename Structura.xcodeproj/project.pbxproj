@@ -7,7 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		039F6D7201A15CB8C4973DB6 /* CSVExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34EE01AB83E39C24C3CD2677 /* CSVExporter.swift */; };
+		068AF9DFCA660426EF2D1FA2 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001C02F9A7CB5D73E04A3065 /* ActivityView.swift */; };
 		365746E1E0A968D133531640 /* RoomMorphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC42345E067FCF74492A29B /* RoomMorphView.swift */; };
+		3F1398B8AEF92E7B2EE13FA5 /* PDFExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67C5CD0BC15A87A0AB74E5BD /* PDFExporter.swift */; };
 		5B832F4D8AC146DCEF4A83A2 /* StructuraApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FE458FE3C3369BCAE73208A /* StructuraApp.swift */; };
 		5DB9295BAB09B8C15E80AA8A /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83AE0C3A1CE9AA9883A95E13 /* HomeView.swift */; };
 		63B3680B29F4C12AD8271A1D /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7951C17A6CBF4A1CC20EE401 /* CaptureView.swift */; };
@@ -22,12 +25,15 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		001C02F9A7CB5D73E04A3065 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
 		06959A398729A01CD14F0E23 /* MeasurementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeasurementsView.swift; sourceTree = "<group>"; };
 		1537BB48F60772F82768EE23 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		2ED71AB772D38FF5E9A434E4 /* ScanStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanStore.swift; sourceTree = "<group>"; };
 		2FE458FE3C3369BCAE73208A /* StructuraApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StructuraApp.swift; sourceTree = "<group>"; };
 		31C7E80545604EDE4F512B9A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		34EE01AB83E39C24C3CD2677 /* CSVExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVExporter.swift; sourceTree = "<group>"; };
 		3E24924C76C28845B801B82C /* Structura.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Structura.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		67C5CD0BC15A87A0AB74E5BD /* PDFExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFExporter.swift; sourceTree = "<group>"; };
 		731115085003FD13639169C5 /* UnitSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnitSystem.swift; sourceTree = "<group>"; };
 		7951C17A6CBF4A1CC20EE401 /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
 		83AE0C3A1CE9AA9883A95E13 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
@@ -47,12 +53,23 @@
 			path = Home;
 			sourceTree = "<group>";
 		};
+		072063EF48EA3ABB7C901146 /* Export */ = {
+			isa = PBXGroup;
+			children = (
+				001C02F9A7CB5D73E04A3065 /* ActivityView.swift */,
+				34EE01AB83E39C24C3CD2677 /* CSVExporter.swift */,
+				67C5CD0BC15A87A0AB74E5BD /* PDFExporter.swift */,
+			);
+			path = Export;
+			sourceTree = "<group>";
+		};
 		25FA356C2323911EF663E402 /* Structura */ = {
 			isa = PBXGroup;
 			children = (
 				31C7E80545604EDE4F512B9A /* Info.plist */,
 				2FE458FE3C3369BCAE73208A /* StructuraApp.swift */,
 				D4560B239FFAF694F4388164 /* Capture */,
+				072063EF48EA3ABB7C901146 /* Export */,
 				040B5D96D26638835C116FB3 /* Home */,
 				D7D263DBC0E8F391D3FCA008 /* Models */,
 				F408807251F71C1810098317 /* Result */,
@@ -174,10 +191,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				068AF9DFCA660426EF2D1FA2 /* ActivityView.swift in Sources */,
+				039F6D7201A15CB8C4973DB6 /* CSVExporter.swift in Sources */,
 				63B3680B29F4C12AD8271A1D /* CaptureView.swift in Sources */,
 				9D6E08814FE36A6948F9D9A8 /* FloorPlan.swift in Sources */,
 				5DB9295BAB09B8C15E80AA8A /* HomeView.swift in Sources */,
 				8C8AB3517A1182CFA187900F /* MeasurementsView.swift in Sources */,
+				3F1398B8AEF92E7B2EE13FA5 /* PDFExporter.swift in Sources */,
 				E4F256CC6E3FCA46E0BCAF9C /* ResultView.swift in Sources */,
 				E8646A4C4193364906670CDD /* RoomCaptureRepresentable.swift in Sources */,
 				365746E1E0A968D133531640 /* RoomMorphView.swift in Sources */,

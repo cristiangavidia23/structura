@@ -7,6 +7,8 @@ struct ResultView: View {
 
     @AppStorage("unitSystem") private var unitSystemRaw = UnitSystem.metric.rawValue
     @State private var mode: Mode = .dollhouse
+    @State private var shareURL: URL?
+    @State private var isPresentingShare = false
 
     private enum Mode: String, CaseIterable {
         case dollhouse = "3D"
@@ -71,8 +73,46 @@ struct ResultView: View {
                 .pickerStyle(.segmented)
                 .frame(width: 160)
             }
+            if let plan {
+                ToolbarItem(placement: .topBarTrailing) {
+                    exportMenu(for: plan)
+                }
+            }
         }
         .animation(.smooth(duration: 0.85), value: mode)
+        .sheet(isPresented: $isPresentingShare) {
+            if let shareURL {
+                ActivityView(items: [shareURL])
+            }
+        }
+    }
+
+    private func exportMenu(for plan: FloorPlan) -> some View {
+        Menu {
+            Button {
+                share(PDFExporter.export(scan: scan, plan: plan, unitSystem: unitSystem))
+            } label: {
+                Label("Plano acotado (PDF)", systemImage: "doc.richtext")
+            }
+            Button {
+                share(store.usdzURL(for: scan))
+            } label: {
+                Label("Modelo 3D (USDZ)", systemImage: "cube")
+            }
+            Button {
+                share(CSVExporter.export(scan: scan, plan: plan))
+            } label: {
+                Label("Medidas (CSV)", systemImage: "tablecells")
+            }
+        } label: {
+            Image(systemName: "square.and.arrow.up")
+        }
+    }
+
+    private func share(_ url: URL?) {
+        guard let url else { return }
+        shareURL = url
+        isPresentingShare = true
     }
 
     @ViewBuilder
