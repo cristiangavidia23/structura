@@ -43,13 +43,21 @@ final class ScanStore: ObservableObject {
         persist()
     }
 
+    /// Returns `nil` if the USDZ export itself fails — the one file every other
+    /// screen depends on (dollhouse projection, share sheet). A room-data or
+    /// thumbnail failure is tolerated: `capturedRoom(for:)` and the card's
+    /// fallback icon already degrade gracefully without them.
     @discardableResult
-    func save(capturedRoom: CapturedRoom, name: String) async -> ScanRecord {
+    func save(capturedRoom: CapturedRoom, name: String) async -> ScanRecord? {
         let id = UUID()
         let usdzFileName = "\(id.uuidString).usdz"
         let usdzURL = scansDirectory.appendingPathComponent(usdzFileName)
 
-        try? capturedRoom.export(to: usdzURL, exportOptions: .parametric)
+        do {
+            try capturedRoom.export(to: usdzURL, exportOptions: .parametric)
+        } catch {
+            return nil
+        }
 
         let roomFileName = "\(id.uuidString)_room.json"
         if let roomData = try? JSONEncoder().encode(capturedRoom) {

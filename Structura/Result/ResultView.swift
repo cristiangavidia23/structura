@@ -52,10 +52,18 @@ struct ResultView: View {
                                 Image(systemName: "chevron.right")
                                     .font(.footnote.weight(.semibold))
                                     .foregroundStyle(Theme.ink.opacity(0.35))
+                                    .accessibilityHidden(true)
                             }
                             .padding(.trailing, 20)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(
+                            "Área \(unitSystem.formatArea(squareMeters: plan.floorAreaSquareMeters)), "
+                                + "altura \(unitSystem.formatLength(meters: plan.wallHeightMeters)), "
+                                + "volumen \(unitSystem.formatVolume(cubicMeters: plan.volumeCubicMeters))"
+                        )
+                        .accessibilityHint("Toca para ver el detalle de medidas")
                     }
                     .background(Theme.cardBackground)
                 }
@@ -107,6 +115,7 @@ struct ResultView: View {
         } label: {
             Image(systemName: "square.and.arrow.up")
         }
+        .accessibilityLabel("Exportar")
     }
 
     private func share(_ url: URL?) {

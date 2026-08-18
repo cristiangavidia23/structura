@@ -56,7 +56,7 @@ struct CaptureView: View {
                     .font(.body)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
+                    .frame(minHeight: 44)
                     .background(.black.opacity(0.55), in: Capsule())
             }
 
@@ -69,7 +69,7 @@ struct CaptureView: View {
                     .font(.body.weight(.semibold))
                     .foregroundStyle(.black)
                     .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
+                    .frame(minHeight: 44)
                     .background(Color(red: 0.93, green: 0.88, blue: 0.78), in: Capsule())
             }
         }

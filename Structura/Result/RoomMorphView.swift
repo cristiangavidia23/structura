@@ -47,6 +47,22 @@ struct RoomMorphView: View, Animatable {
                     yaw += value.translation.width / 110
                 }
         )
+        // The Canvas draws pixels with no inherent accessibility tree, so without
+        // this VoiceOver sees nothing here at all — not even a label. The rotate
+        // gesture also has no VoiceOver equivalent by default, hence the
+        // adjustable action as a swipe-up/down substitute.
+        .accessibilityElement()
+        .accessibilityLabel("Modelo del ambiente")
+        .accessibilityValue(progress < 0.5 ? "Vista 3D" : "Plano 2D acotado")
+        .accessibilityHint(progress < 0.5 ? "Ajustable para rotar la vista" : "")
+        .accessibilityAdjustableAction { direction in
+            guard progress < 0.5 else { return }
+            switch direction {
+            case .increment: yaw += 0.3
+            case .decrement: yaw -= 0.3
+            @unknown default: break
+            }
+        }
     }
 
     // MARK: - Projection

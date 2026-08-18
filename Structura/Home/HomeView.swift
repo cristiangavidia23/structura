@@ -4,6 +4,8 @@ import RoomPlan
 struct HomeView: View {
     @StateObject private var store = ScanStore()
     @State private var isPresentingCapture = false
+    @State private var isSaving = false
+    @State private var saveErrorMessage: String?
 
     private let columns = [GridItem(.adaptive(minimum: 150), spacing: 16)]
 
@@ -12,12 +14,15 @@ struct HomeView: View {
             ZStack(alignment: .bottomTrailing) {
                 Theme.paper.ignoresSafeArea()
 
-                if store.scans.isEmpty {
+                if store.scans.isEmpty && !isSaving {
                     emptyState
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     ScrollView {
                         LazyVGrid(columns: columns, spacing: 16) {
+                            if isSaving {
+                                SavingCard()
+                            }
                             ForEach(store.scans) { scan in
                                 NavigationLink {
                                     ResultView(scan: scan, store: store)
@@ -44,13 +49,30 @@ struct HomeView: View {
             .navigationTitle("Structura")
             .fullScreenCover(isPresented: $isPresentingCapture) {
                 CaptureView { room in
+                    isSaving = true
                     Task {
                         let name = "Escaneo \(store.scans.count + 1)"
-                        await store.save(capturedRoom: room, name: name)
+                        let saved = await store.save(capturedRoom: room, name: name)
+                        isSaving = false
+                        if saved == nil {
+                            saveErrorMessage = "No se pudo guardar el escaneo. Intenta escanear de nuevo."
+                        }
                     }
                 }
             }
+            .alert("Error al guardar", isPresented: errorPresented) {
+                Button("Cerrar", role: .cancel) { saveErrorMessage = nil }
+            } message: {
+                Text(saveErrorMessage ?? "")
+            }
         }
+    }
+
+    private var errorPresented: Binding<Bool> {
+        Binding(
+            get: { saveErrorMessage != nil },
+            set: { isPresented in if !isPresented { saveErrorMessage = nil } }
+        )
     }
 
     private var newScanButton: some View {
@@ -82,6 +104,28 @@ struct HomeView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }
+    }
+}
+
+/// Placeholder shown while a freshly captured room is being exported to USDZ
+/// and thumbnailed — that work can take a couple of seconds, and without this
+/// the new card just pops in unexplained.
+private struct SavingCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Theme.cardBackground)
+                ProgressView()
+            }
+            .aspectRatio(1, contentMode: .fit)
+
+            Text("Guardando…")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Theme.ink.opacity(0.5))
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Guardando escaneo")
     }
 }
 
@@ -119,6 +163,11 @@ private struct ScanCard: View {
                 .monospacedDigit()
                 .foregroundStyle(Theme.ink.opacity(0.5))
         }
+        // Without this, VoiceOver reads the thumbnail, name, and date as three
+        // separate stops; grouped, it reads once as a single navigable card.
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(scan.name), \(scan.createdAt.formatted(date: .abbreviated, time: .omitted))")
+        .accessibilityHint("Toca para ver el plano y las medidas")
     }
 }
 
