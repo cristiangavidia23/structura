@@ -1,0 +1,20 @@
+# Xcode
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+DerivedData/
+.build/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# xcodegen: project.pbxproj is generated from project.yml, but we keep it
+# checked in so the repo can be opened without running xcodegen first.
+
+# Swift Package Manager
+.swiftpm/
+
+# macOS
+.DS_Store

@@ -1,0 +1,36 @@
+name: Structura
+options:
+  bundleIdPrefix: com.cristiangavidia
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+targets:
+  Structura:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Structura
+    info:
+      path: Structura/Info.plist
+      properties:
+        NSCameraUsageDescription: "Structura usa la cámara junto con el sensor LiDAR para escanear tu ambiente y generar el plano 2D acotado y el modelo 3D."
+        UIRequiredDeviceCapabilities:
+          - arkit
+          - lidar
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIRequiresFullScreen: true
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cristiangavidia.structura
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        GENERATE_INFOPLIST_FILE: false
+        DEVELOPMENT_TEAM: WREX368LLS
+        CODE_SIGN_STYLE: Automatic
