@@ -41,8 +41,26 @@ struct FloorPlan {
             atan2(end.y - start.y, end.x - start.x)
         }
 
+        /// Whether the *length* shown for this segment was actually measured, as
+        /// opposed to inferred because RoomPlan never saw both ends. This is what
+        /// drives the "~" prefix and dashed styling.
+        ///
+        /// Deliberately independent of `confidence`: RoomPlan reports `.high`
+        /// rarely even on good scans, so gating on it flagged nearly everything
+        /// as unreliable regardless of actual scan quality.
         var isReliable: Bool {
-            !isExtrapolated && confidence == .high
+            !isExtrapolated
+        }
+
+        /// Raw RoomPlan confidence, for display as its own data point (CSV,
+        /// measurement detail) — not folded into `isReliable`.
+        var confidenceLabel: String {
+            switch confidence {
+            case .high: return "alta"
+            case .medium: return "media"
+            case .low: return "baja"
+            @unknown default: return "media"
+            }
         }
 
         mutating func rotate(to newAngle: Double) {
@@ -88,8 +106,15 @@ struct FloorPlan {
     /// - Parameter squareTolerance: Maximum angular error attributed to scan
     ///   noise. Walls within this of the room's grid are snapped; anything
     ///   beyond it is treated as a real out-of-square condition and preserved.
+    /// Segments shorter than this are scan artifacts (duplicate corners, stray
+    /// slivers from re-passing the same spot), not real geometry — RoomPlan
+    /// occasionally emits them, and a zero-length "wall" would otherwise corrupt
+    /// the grid-angle estimate and show up as a bogus 0.00 m entry.
+    private static let minimumSegmentLength = 0.05
+
     init(room: CapturedRoom, squareTolerance: Double = 5 * .pi / 180) {
         var collected = Self.makeSegments(from: room)
+            .filter { $0.lengthMeters >= Self.minimumSegmentLength }
         var objects = Self.makeFurniture(from: room)
 
         let grid = Self.dominantGridAngle(of: collected.filter { $0.category == .wall })

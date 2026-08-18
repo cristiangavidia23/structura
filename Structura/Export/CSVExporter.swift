@@ -14,7 +14,7 @@ enum CSVExporter {
                     "\(label) \(index + 1)",
                     String(format: "%.2f", segment.lengthMeters),
                     height,
-                    confidenceLabel(segment),
+                    segment.confidenceLabel,
                     segment.isOutOfSquare ? "si" : "no"
                 ].joined(separator: ","))
             }
@@ -42,10 +42,6 @@ enum CSVExporter {
         } catch {
             return nil
         }
-    }
-
-    private static func confidenceLabel(_ segment: FloorPlan.Segment) -> String {
-        segment.isReliable ? "alta" : "baja"
     }
 }
 
