@@ -196,6 +196,14 @@ struct PaywallView: View {
             .foregroundStyle(Theme.ink.opacity(0.4))
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 6) {
+                Link("Términos de Uso", destination: LegalLinks.termsOfUse)
+                Text("·").foregroundStyle(Theme.ink.opacity(0.3))
+                Link("Privacidad", destination: LegalLinks.privacyPolicy)
+            }
+            .font(.caption2)
+            .foregroundStyle(Theme.ink.opacity(0.45))
         }
         .padding(.horizontal, 24)
         .padding(.top, 12)

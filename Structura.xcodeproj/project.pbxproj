@@ -18,6 +18,7 @@
 		5DB9295BAB09B8C15E80AA8A /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83AE0C3A1CE9AA9883A95E13 /* HomeView.swift */; };
 		63B3680B29F4C12AD8271A1D /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7951C17A6CBF4A1CC20EE401 /* CaptureView.swift */; };
 		6FE324EDAAA0A95D5973973C /* SketchBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9AE11DBB56EE92B5291A229 /* SketchBackdrop.swift */; };
+		8C0D8D7D0EA6FD2C021B9BAC /* LegalLinks.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7729D532E4D0E3C98E539BC /* LegalLinks.swift */; };
 		8C8AB3517A1182CFA187900F /* MeasurementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06959A398729A01CD14F0E23 /* MeasurementsView.swift */; };
 		9D6E08814FE36A6948F9D9A8 /* FloorPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8539560292F05A011D44BB /* FloorPlan.swift */; };
 		AB10C18997BD74B42E6505FB /* ScanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ED71AB772D38FF5E9A434E4 /* ScanStore.swift */; };
@@ -48,6 +49,7 @@
 		8F1DB39A49C2AFE040165840 /* ScanRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanRecord.swift; sourceTree = "<group>"; };
 		9F2D1BB617A4B198C03673AC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		ABC42345E067FCF74492A29B /* RoomMorphView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomMorphView.swift; sourceTree = "<group>"; };
+		B7729D532E4D0E3C98E539BC /* LegalLinks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalLinks.swift; sourceTree = "<group>"; };
 		BEA66209CF36225BA83E1D2F /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		E78D94B24D2AB18DA74DD4D3 /* RoomCaptureRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomCaptureRepresentable.swift; sourceTree = "<group>"; };
 		E9AE11DBB56EE92B5291A229 /* SketchBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchBackdrop.swift; sourceTree = "<group>"; };
@@ -151,6 +153,7 @@
 		AB28847A67A190B855FDEF1F /* Support */ = {
 			isa = PBXGroup;
 			children = (
+				B7729D532E4D0E3C98E539BC /* LegalLinks.swift */,
 				1537BB48F60772F82768EE23 /* Theme.swift */,
 				731115085003FD13639169C5 /* UnitSystem.swift */,
 			);
@@ -256,6 +259,7 @@
 				63B3680B29F4C12AD8271A1D /* CaptureView.swift in Sources */,
 				9D6E08814FE36A6948F9D9A8 /* FloorPlan.swift in Sources */,
 				5DB9295BAB09B8C15E80AA8A /* HomeView.swift in Sources */,
+				8C0D8D7D0EA6FD2C021B9BAC /* LegalLinks.swift in Sources */,
 				8C8AB3517A1182CFA187900F /* MeasurementsView.swift in Sources */,
 				B682CF5C7E2A6D4FB6107A37 /* OnboardingView.swift in Sources */,
 				3F1398B8AEF92E7B2EE13FA5 /* PDFExporter.swift in Sources */,

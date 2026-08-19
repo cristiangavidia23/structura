@@ -60,6 +60,20 @@ struct SettingsView: View {
                 }
             }
 
+            Section("Legal") {
+                Link(destination: LegalLinks.termsOfUse) {
+                    Label("Términos de Uso", systemImage: "doc.text")
+                        .foregroundStyle(Theme.ink)
+                }
+                .listRowBackground(Theme.cardBackground)
+
+                Link(destination: LegalLinks.privacyPolicy) {
+                    Label("Política de Privacidad", systemImage: "hand.raised")
+                        .foregroundStyle(Theme.ink)
+                }
+                .listRowBackground(Theme.cardBackground)
+            }
+
             Section {
                 HStack {
                     Text("Versión")
