@@ -19,6 +19,10 @@ final class PurchaseManager: NSObject, ObservableObject {
 
     @Published private(set) var isPremium = false
     @Published private(set) var offering: Offering?
+    /// Set whenever `loadOfferings` fails or succeeds with no current offering —
+    /// surfaced in the paywall instead of leaving it spinning forever with no
+    /// way to tell "still loading" from "broken."
+    @Published private(set) var offeringsError: String?
 
     private var isConfigured: Bool { Self.apiKey != "REVENUECAT_API_KEY" }
 
@@ -40,8 +44,19 @@ final class PurchaseManager: NSObject, ObservableObject {
     }
 
     func loadOfferings() async {
-        guard isConfigured, let offerings = try? await Purchases.shared.offerings() else { return }
-        offering = offerings.current
+        guard isConfigured else {
+            offeringsError = "RevenueCat no está configurado (falta la API key)."
+            return
+        }
+        do {
+            let offerings = try await Purchases.shared.offerings()
+            offering = offerings.current
+            offeringsError = offering == nil
+                ? "RevenueCat no devolvió ningún offering marcado como \"Current\"."
+                : nil
+        } catch {
+            offeringsError = error.localizedDescription
+        }
     }
 
     /// Throws on failure; a user-initiated cancel is reported via `userCancelled`,

@@ -33,6 +33,8 @@ struct PaywallView: View {
 
                         if let offering = purchases.offering {
                             packages(offering)
+                        } else if let offeringsError = purchases.offeringsError {
+                            offeringsErrorView(offeringsError)
                         } else {
                             ProgressView()
                                 .padding(.top, 40)
@@ -130,6 +132,25 @@ struct PaywallView: View {
                 .onTapGesture { selectedPackage = package }
             }
         }
+    }
+
+    private func offeringsErrorView(_ message: String) -> some View {
+        VStack(spacing: 8) {
+            Text("No se pudieron cargar los planes")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Theme.ink)
+            Text(message)
+                .font(.caption)
+                .foregroundStyle(Theme.ink.opacity(0.6))
+                .multilineTextAlignment(.center)
+            Button("Reintentar") {
+                Task { await purchases.loadOfferings() }
+            }
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(Theme.accent)
+            .padding(.top, 4)
+        }
+        .padding(.top, 40)
     }
 
     private var footer: some View {
