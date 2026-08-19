@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct StructuraApp: App {
     @StateObject private var purchases = PurchaseManager.shared
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     init() {
         PurchaseManager.shared.configure()
@@ -10,8 +11,14 @@ struct StructuraApp: App {
 
     var body: some Scene {
         WindowGroup {
-            HomeView()
-                .environmentObject(purchases)
+            Group {
+                if hasCompletedOnboarding {
+                    HomeView()
+                } else {
+                    OnboardingView()
+                }
+            }
+            .environmentObject(purchases)
         }
     }
 }

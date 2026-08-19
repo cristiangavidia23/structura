@@ -17,10 +17,12 @@
 		5B832F4D8AC146DCEF4A83A2 /* StructuraApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FE458FE3C3369BCAE73208A /* StructuraApp.swift */; };
 		5DB9295BAB09B8C15E80AA8A /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83AE0C3A1CE9AA9883A95E13 /* HomeView.swift */; };
 		63B3680B29F4C12AD8271A1D /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7951C17A6CBF4A1CC20EE401 /* CaptureView.swift */; };
+		6FE324EDAAA0A95D5973973C /* SketchBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9AE11DBB56EE92B5291A229 /* SketchBackdrop.swift */; };
 		8C8AB3517A1182CFA187900F /* MeasurementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06959A398729A01CD14F0E23 /* MeasurementsView.swift */; };
 		9D6E08814FE36A6948F9D9A8 /* FloorPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8539560292F05A011D44BB /* FloorPlan.swift */; };
 		AB10C18997BD74B42E6505FB /* ScanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ED71AB772D38FF5E9A434E4 /* ScanStore.swift */; };
 		ADE8A7A6FCAAC237C267A16C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F2D1BB617A4B198C03673AC /* SettingsView.swift */; };
+		B682CF5C7E2A6D4FB6107A37 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEA66209CF36225BA83E1D2F /* OnboardingView.swift */; };
 		B7138A37BE4DB4F202E22065 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3E15B20D478AC5FAE663090 /* PaywallView.swift */; };
 		C63D263F638DF8C85B22E6EE /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1537BB48F60772F82768EE23 /* Theme.swift */; };
 		E4F256CC6E3FCA46E0BCAF9C /* ResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA76854C563F8F4C3BC05788 /* ResultView.swift */; };
@@ -46,7 +48,9 @@
 		8F1DB39A49C2AFE040165840 /* ScanRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanRecord.swift; sourceTree = "<group>"; };
 		9F2D1BB617A4B198C03673AC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		ABC42345E067FCF74492A29B /* RoomMorphView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomMorphView.swift; sourceTree = "<group>"; };
+		BEA66209CF36225BA83E1D2F /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		E78D94B24D2AB18DA74DD4D3 /* RoomCaptureRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomCaptureRepresentable.swift; sourceTree = "<group>"; };
+		E9AE11DBB56EE92B5291A229 /* SketchBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchBackdrop.swift; sourceTree = "<group>"; };
 		EBAF40F0AD07E417D2B06870 /* PurchaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseManager.swift; sourceTree = "<group>"; };
 		EE8539560292F05A011D44BB /* FloorPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorPlan.swift; sourceTree = "<group>"; };
 		F3E15B20D478AC5FAE663090 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
@@ -92,6 +96,7 @@
 				072063EF48EA3ABB7C901146 /* Export */,
 				040B5D96D26638835C116FB3 /* Home */,
 				D7D263DBC0E8F391D3FCA008 /* Models */,
+				3AB3699E16AC47308782B7E5 /* Onboarding */,
 				9893396A99C1584B150A48E5 /* Purchases */,
 				F408807251F71C1810098317 /* Result */,
 				69F32EDC05DDA951ADB030BD /* Settings */,
@@ -106,6 +111,15 @@
 				25FA356C2323911EF663E402 /* Structura */,
 				822905426509DEDBF6120DBF /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		3AB3699E16AC47308782B7E5 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				BEA66209CF36225BA83E1D2F /* OnboardingView.swift */,
+				E9AE11DBB56EE92B5291A229 /* SketchBackdrop.swift */,
+			);
+			path = Onboarding;
 			sourceTree = "<group>";
 		};
 		69F32EDC05DDA951ADB030BD /* Settings */ = {
@@ -243,6 +257,7 @@
 				9D6E08814FE36A6948F9D9A8 /* FloorPlan.swift in Sources */,
 				5DB9295BAB09B8C15E80AA8A /* HomeView.swift in Sources */,
 				8C8AB3517A1182CFA187900F /* MeasurementsView.swift in Sources */,
+				B682CF5C7E2A6D4FB6107A37 /* OnboardingView.swift in Sources */,
 				3F1398B8AEF92E7B2EE13FA5 /* PDFExporter.swift in Sources */,
 				B7138A37BE4DB4F202E22065 /* PaywallView.swift in Sources */,
 				107B7208591424E8291D3979 /* PurchaseManager.swift in Sources */,
@@ -252,6 +267,7 @@
 				EC6B4FD1E91A04911C370B23 /* ScanRecord.swift in Sources */,
 				AB10C18997BD74B42E6505FB /* ScanStore.swift in Sources */,
 				ADE8A7A6FCAAC237C267A16C /* SettingsView.swift in Sources */,
+				6FE324EDAAA0A95D5973973C /* SketchBackdrop.swift in Sources */,
 				5B832F4D8AC146DCEF4A83A2 /* StructuraApp.swift in Sources */,
 				C63D263F638DF8C85B22E6EE /* Theme.swift in Sources */,
 				F40F67FAC6756A4521982309 /* UnitSystem.swift in Sources */,
