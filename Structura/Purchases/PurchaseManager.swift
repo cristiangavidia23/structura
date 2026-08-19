@@ -12,7 +12,7 @@ final class PurchaseManager: NSObject, ObservableObject {
     /// Until this is set, the SDK is never configured and the app safely treats
     /// everyone as non-premium — the paywall still shows, purchases just can't
     /// complete yet.
-    private static let apiKey = "REVENUECAT_API_KEY"
+    private static let apiKey = "appl_SsGwZthaCzBiCTYnJOojunUGPOT"
 
     /// Must match the Entitlement identifier created in the RevenueCat dashboard.
     private static let entitlementID = "premium"
