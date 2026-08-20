@@ -28,6 +28,7 @@ struct ResultView: View {
     var body: some View {
         ZStack {
             Theme.paper.ignoresSafeArea()
+            GraphPaperBackground().ignoresSafeArea()
 
             VStack(spacing: 0) {
                 content

@@ -23,6 +23,7 @@ struct OnboardingView: View {
     var body: some View {
         ZStack {
             Theme.paper.ignoresSafeArea()
+            GraphPaperBackground().ignoresSafeArea()
             SketchBackdrop()
                 .opacity(0.07)
                 .ignoresSafeArea()

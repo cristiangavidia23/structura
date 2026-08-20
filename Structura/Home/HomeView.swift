@@ -13,27 +13,28 @@ struct HomeView: View {
     /// it); any scan beyond that needs premium.
     private static let freeScanCount = 1
 
-    private let columns = [GridItem(.adaptive(minimum: 150), spacing: 16)]
+    private let columns = [GridItem(.adaptive(minimum: 150), spacing: 18)]
 
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottomTrailing) {
                 Theme.paper.ignoresSafeArea()
+                GraphPaperBackground().ignoresSafeArea()
 
                 if store.scans.isEmpty && !isSaving {
                     emptyState
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     ScrollView {
-                        LazyVGrid(columns: columns, spacing: 16) {
+                        LazyVGrid(columns: columns, spacing: 18) {
                             if isSaving {
                                 SavingCard()
                             }
-                            ForEach(store.scans) { scan in
+                            ForEach(Array(store.scans.enumerated()), id: \.element.id) { index, scan in
                                 NavigationLink {
                                     ResultView(scan: scan, store: store)
                                 } label: {
-                                    ScanCard(scan: scan, store: store)
+                                    ScanCard(scan: scan, store: store, sheetNumber: index + 1)
                                 }
                                 .buttonStyle(.plain)
                                 .contextMenu {
@@ -46,7 +47,7 @@ struct HomeView: View {
                             }
                         }
                         .padding(16)
-                        .padding(.bottom, 72)
+                        .padding(.bottom, 88)
                     }
                 }
 
@@ -109,30 +110,45 @@ struct HomeView: View {
                 isPresentingCapture = true
             }
         } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 56, height: 56)
-                .background(Theme.accent, in: Circle())
-                .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+            ZStack {
+                Circle()
+                    .stroke(Theme.accent.opacity(0.35), lineWidth: 1)
+                    .frame(width: 68, height: 68)
+                Circle()
+                    .fill(Theme.accent)
+                    .frame(width: 56, height: 56)
+                Image(systemName: "plus")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+            .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
         }
         .padding(24)
         .accessibilityLabel("Nuevo escaneo")
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "viewfinder")
-                .font(.system(size: 36))
-                .foregroundStyle(Theme.ink.opacity(0.4))
-            Text("Todavía no tienes escaneos")
-                .font(.headline)
-                .foregroundStyle(Theme.ink)
-            Text("Toca el botón + para escanear tu primer ambiente.")
-                .font(.subheadline)
-                .foregroundStyle(Theme.ink.opacity(0.6))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+        VStack(spacing: 20) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 4)
+                    .strokeBorder(Theme.ink.opacity(0.15), style: StrokeStyle(lineWidth: 1, dash: [3, 4]))
+                CornerBrackets(color: Theme.ink.opacity(0.35), length: 16, inset: 6)
+                Image(systemName: "viewfinder")
+                    .font(.system(size: 30))
+                    .foregroundStyle(Theme.ink.opacity(0.35))
+            }
+            .frame(width: 120, height: 120)
+
+            VStack(spacing: 6) {
+                Text("Todavía no tienes escaneos")
+                    .font(.headline)
+                    .foregroundStyle(Theme.ink)
+                Text("Toca el botón + para escanear tu primer ambiente.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.ink.opacity(0.6))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
         }
     }
 }
@@ -144,8 +160,8 @@ private struct SavingCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Theme.cardBackground)
+                Theme.cardBackground
+                CornerBrackets(color: Theme.ink.opacity(0.25), length: 12)
                 ProgressView()
             }
             .aspectRatio(1, contentMode: .fit)
@@ -162,26 +178,39 @@ private struct SavingCard: View {
 private struct ScanCard: View {
     let scan: ScanRecord
     let store: ScanStore
+    let sheetNumber: Int
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Theme.cardBackground)
+            ZStack(alignment: .topLeading) {
+                Theme.cardBackground
                 if let url = store.thumbnailURL(for: scan),
                    let image = UIImage(contentsOfFile: url.path) {
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
                 } else {
                     Image(systemName: "cube.transparent")
                         .font(.system(size: 28))
                         .foregroundStyle(Theme.ink.opacity(0.3))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+                CornerBrackets(color: Theme.ink.opacity(0.3), length: 12, inset: 4)
+
+                Text(String(format: "%02d", sheetNumber))
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Theme.paper)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Theme.ink.opacity(0.65), in: RoundedRectangle(cornerRadius: 3))
+                    .padding(7)
             }
             .aspectRatio(1, contentMode: .fit)
-            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .overlay(
+                RoundedRectangle(cornerRadius: 4)
+                    .strokeBorder(Theme.ink.opacity(0.12), lineWidth: 1)
+            )
 
             Text(scan.name)
                 .font(.subheadline.weight(.medium))

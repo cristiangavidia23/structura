@@ -14,6 +14,14 @@ struct CaptureView: View {
                     RoomCaptureRepresentable(coordinator: coordinator)
                         .ignoresSafeArea()
 
+                    CornerBrackets(color: .white.opacity(0.5), length: 22, thickness: 1.5, inset: 28)
+                        .ignoresSafeArea()
+                        .allowsHitTesting(false)
+
+                    cancelButton
+                        .frame(maxHeight: .infinity, alignment: .top)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
                     overlay
                 }
                 .onAppear {
@@ -46,35 +54,35 @@ struct CaptureView: View {
         )
     }
 
-    private var overlay: some View {
-        HStack {
-            Button {
-                coordinator.stop()
-                dismiss()
-            } label: {
-                Text("Cancelar")
-                    .font(.body)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .frame(minHeight: 44)
-                    .background(.black.opacity(0.55), in: Capsule())
-            }
-
-            Spacer()
-
-            Button {
-                coordinator.stop()
-            } label: {
-                Text("Listo")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.black)
-                    .padding(.horizontal, 20)
-                    .frame(minHeight: 44)
-                    .background(Color(red: 0.93, green: 0.88, blue: 0.78), in: Capsule())
-            }
+    private var cancelButton: some View {
+        Button {
+            coordinator.stop()
+            dismiss()
+        } label: {
+            Image(systemName: "xmark")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .background(.black.opacity(0.5), in: Circle())
         }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 24)
+        .padding(.leading, 20)
+        .padding(.top, 8)
+        .accessibilityLabel("Cancelar")
+    }
+
+    private var overlay: some View {
+        Button {
+            coordinator.stop()
+        } label: {
+            Text("Listo")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 28)
+                .frame(minHeight: 50)
+                .background(Theme.accent, in: Capsule())
+                .shadow(color: .black.opacity(0.3), radius: 8, y: 3)
+        }
+        .padding(.bottom, 28)
     }
 
     private var unsupportedDevice: some View {
