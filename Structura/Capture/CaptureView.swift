@@ -72,6 +72,7 @@ struct CaptureView: View {
 
     private var overlay: some View {
         Button {
+            Haptics.tap()
             coordinator.stop()
         } label: {
             Text("Listo")

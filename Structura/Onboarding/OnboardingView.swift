@@ -74,12 +74,8 @@ struct OnboardingView: View {
             }
         } label: {
             Text(isLastSlide ? "Comenzar" : "Siguiente")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 50)
         }
-        .background(Theme.accent, in: RoundedRectangle(cornerRadius: 14))
+        .buttonStyle(.primary)
     }
 
     /// Requesting access here — rather than waiting for the first capture attempt

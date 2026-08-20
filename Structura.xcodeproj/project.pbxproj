@@ -22,12 +22,15 @@
 		6FE324EDAAA0A95D5973973C /* SketchBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9AE11DBB56EE92B5291A229 /* SketchBackdrop.swift */; };
 		8C0D8D7D0EA6FD2C021B9BAC /* LegalLinks.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7729D532E4D0E3C98E539BC /* LegalLinks.swift */; };
 		8C8AB3517A1182CFA187900F /* MeasurementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06959A398729A01CD14F0E23 /* MeasurementsView.swift */; };
+		9A583751901FDC76CDD5CA2C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8DF852FB48CD3854642A5602 /* Assets.xcassets */; };
 		9D6E08814FE36A6948F9D9A8 /* FloorPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8539560292F05A011D44BB /* FloorPlan.swift */; };
 		AB10C18997BD74B42E6505FB /* ScanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ED71AB772D38FF5E9A434E4 /* ScanStore.swift */; };
 		ADE8A7A6FCAAC237C267A16C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F2D1BB617A4B198C03673AC /* SettingsView.swift */; };
 		B682CF5C7E2A6D4FB6107A37 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEA66209CF36225BA83E1D2F /* OnboardingView.swift */; };
 		B7138A37BE4DB4F202E22065 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3E15B20D478AC5FAE663090 /* PaywallView.swift */; };
 		C63D263F638DF8C85B22E6EE /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1537BB48F60772F82768EE23 /* Theme.swift */; };
+		CFEF8CC68476CFA61F38B341 /* PrimaryButtonStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CFB7584D3FF0D3E7C1BD1EE /* PrimaryButtonStyle.swift */; };
+		D90A81742AF1F6505906166F /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 863FE9E182C6FF0E7485919B /* Haptics.swift */; };
 		E4F256CC6E3FCA46E0BCAF9C /* ResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA76854C563F8F4C3BC05788 /* ResultView.swift */; };
 		E8646A4C4193364906670CDD /* RoomCaptureRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = E78D94B24D2AB18DA74DD4D3 /* RoomCaptureRepresentable.swift */; };
 		EC6B4FD1E91A04911C370B23 /* ScanRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F1DB39A49C2AFE040165840 /* ScanRecord.swift */; };
@@ -45,10 +48,13 @@
 		34EE01AB83E39C24C3CD2677 /* CSVExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVExporter.swift; sourceTree = "<group>"; };
 		3E24924C76C28845B801B82C /* Structura.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Structura.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		67C5CD0BC15A87A0AB74E5BD /* PDFExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFExporter.swift; sourceTree = "<group>"; };
+		6CFB7584D3FF0D3E7C1BD1EE /* PrimaryButtonStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButtonStyle.swift; sourceTree = "<group>"; };
 		731115085003FD13639169C5 /* UnitSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnitSystem.swift; sourceTree = "<group>"; };
 		7951C17A6CBF4A1CC20EE401 /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
 		83AE0C3A1CE9AA9883A95E13 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		863FE9E182C6FF0E7485919B /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		8B01C9230240DE02C68C495B /* BlueprintBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlueprintBackdrop.swift; sourceTree = "<group>"; };
+		8DF852FB48CD3854642A5602 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		8F1DB39A49C2AFE040165840 /* ScanRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanRecord.swift; sourceTree = "<group>"; };
 		9F2D1BB617A4B198C03673AC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A54ECCBFE7B5F5AEE59C49EF /* CornerBrackets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CornerBrackets.swift; sourceTree = "<group>"; };
@@ -96,6 +102,7 @@
 		25FA356C2323911EF663E402 /* Structura */ = {
 			isa = PBXGroup;
 			children = (
+				8DF852FB48CD3854642A5602 /* Assets.xcassets */,
 				31C7E80545604EDE4F512B9A /* Info.plist */,
 				2FE458FE3C3369BCAE73208A /* StructuraApp.swift */,
 				D4560B239FFAF694F4388164 /* Capture */,
@@ -159,7 +166,9 @@
 			children = (
 				A54ECCBFE7B5F5AEE59C49EF /* CornerBrackets.swift */,
 				11138480935319AAE2C1B695 /* GraphPaperBackground.swift */,
+				863FE9E182C6FF0E7485919B /* Haptics.swift */,
 				B7729D532E4D0E3C98E539BC /* LegalLinks.swift */,
+				6CFB7584D3FF0D3E7C1BD1EE /* PrimaryButtonStyle.swift */,
 				1537BB48F60772F82768EE23 /* Theme.swift */,
 				731115085003FD13639169C5 /* UnitSystem.swift */,
 			);
@@ -203,6 +212,7 @@
 			buildConfigurationList = 34411EAD97752BC777D79D54 /* Build configuration list for PBXNativeTarget "Structura" */;
 			buildPhases = (
 				A5103B49B596CC7CB1E757EB /* Sources */,
+				8699B00AE39F6C1B22226A23 /* Resources */,
 				DC1E4EE5444A406BF1BFAC45 /* Frameworks */,
 			);
 			buildRules = (
@@ -254,6 +264,17 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		8699B00AE39F6C1B22226A23 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9A583751901FDC76CDD5CA2C /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		A5103B49B596CC7CB1E757EB /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -266,12 +287,14 @@
 				3B64A9FBA94EC287070C23CF /* CornerBrackets.swift in Sources */,
 				9D6E08814FE36A6948F9D9A8 /* FloorPlan.swift in Sources */,
 				49B7CB83FFF47DE920E7F834 /* GraphPaperBackground.swift in Sources */,
+				D90A81742AF1F6505906166F /* Haptics.swift in Sources */,
 				5DB9295BAB09B8C15E80AA8A /* HomeView.swift in Sources */,
 				8C0D8D7D0EA6FD2C021B9BAC /* LegalLinks.swift in Sources */,
 				8C8AB3517A1182CFA187900F /* MeasurementsView.swift in Sources */,
 				B682CF5C7E2A6D4FB6107A37 /* OnboardingView.swift in Sources */,
 				3F1398B8AEF92E7B2EE13FA5 /* PDFExporter.swift in Sources */,
 				B7138A37BE4DB4F202E22065 /* PaywallView.swift in Sources */,
+				CFEF8CC68476CFA61F38B341 /* PrimaryButtonStyle.swift in Sources */,
 				107B7208591424E8291D3979 /* PurchaseManager.swift in Sources */,
 				E4F256CC6E3FCA46E0BCAF9C /* ResultView.swift in Sources */,
 				E8646A4C4193364906670CDD /* RoomCaptureRepresentable.swift in Sources */,
@@ -293,6 +316,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = WREX368LLS;
@@ -433,6 +457,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = WREX368LLS;

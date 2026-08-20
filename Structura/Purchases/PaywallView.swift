@@ -59,7 +59,10 @@ struct PaywallView: View {
             Text(errorMessage ?? "")
         }
         .onChange(of: purchases.isPremium) {
-            if purchases.isPremium { dismiss() }
+            if purchases.isPremium {
+                Haptics.success()
+                dismiss()
+            }
         }
     }
 
@@ -158,19 +161,13 @@ struct PaywallView: View {
             Button {
                 purchase()
             } label: {
-                ZStack {
-                    if isPurchasing {
-                        ProgressView().tint(.white)
-                    } else {
-                        Text(ctaTitle)
-                            .font(.body.weight(.semibold))
-                    }
+                if isPurchasing {
+                    ProgressView().tint(.white)
+                } else {
+                    Text(ctaTitle)
                 }
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 50)
             }
-            .foregroundStyle(.white)
-            .background(Theme.accent, in: RoundedRectangle(cornerRadius: 14))
+            .buttonStyle(.primary)
             .disabled(selectedPackage == nil || isPurchasing)
 
             Button {

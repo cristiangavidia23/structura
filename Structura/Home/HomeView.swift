@@ -39,6 +39,7 @@ struct HomeView: View {
                                 .buttonStyle(.plain)
                                 .contextMenu {
                                     Button(role: .destructive) {
+                                        Haptics.warning()
                                         store.delete(scan)
                                     } label: {
                                         Label("Eliminar", systemImage: "trash")
@@ -62,7 +63,10 @@ struct HomeView: View {
                         let saved = await store.save(capturedRoom: room, name: name)
                         isSaving = false
                         if saved == nil {
+                            Haptics.warning()
                             saveErrorMessage = "No se pudo guardar el escaneo. Intenta escanear de nuevo."
+                        } else {
+                            Haptics.success()
                         }
                     }
                 }
