@@ -14,8 +14,12 @@ final class PurchaseManager: NSObject, ObservableObject {
     /// complete yet.
     private static let apiKey = "appl_SsGwZthaCzBiCTYnJOojunUGPOT"
 
-    /// Must match the Entitlement identifier created in the RevenueCat dashboard.
-    private static let entitlementID = "premium"
+    /// Structura Premium isn't one entitlement in the dashboard — each plan has
+    /// its own ("Structura Semanal" attached to the weekly product, "Structura
+    /// Anual" attached to the yearly one). Any one of them being active counts
+    /// as premium; a single unified entitlement would need reorganizing real
+    /// sandbox purchase history in RevenueCat, so the app adapts instead.
+    private static let entitlementIDs = ["Structura Semanal", "Structura Anual"]
 
     @Published private(set) var isPremium = false
     @Published private(set) var offering: Offering?
@@ -74,7 +78,7 @@ final class PurchaseManager: NSObject, ObservableObject {
     }
 
     private func apply(_ info: CustomerInfo) {
-        isPremium = info.entitlements[Self.entitlementID]?.isActive == true
+        isPremium = Self.entitlementIDs.contains { info.entitlements[$0]?.isActive == true }
     }
 }
 
