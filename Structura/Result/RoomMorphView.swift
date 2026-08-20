@@ -31,6 +31,8 @@ struct RoomMorphView: View, Animatable {
             let prisms = buildPrisms()
             guard let fit = Fit(prisms: prisms, projection: projection, size: size) else { return }
 
+            drawFloor(in: &context, projection: projection, fit: fit)
+
             for prism in prisms.sorted(by: { $0.depth(in: projection) < $1.depth(in: projection) }) {
                 draw(prism, in: &context, projection: projection, fit: fit)
             }
@@ -210,8 +212,12 @@ struct RoomMorphView: View, Animatable {
         face.closeSubpath()
 
         // The face has area only while the room still has height; at the end of
-        // the morph it degenerates to the plan's line.
-        let fillOpacity = 0.10 * (1 - progress)
+        // the morph it degenerates to the plan's line. Opacity also carries a
+        // two-tone pseudo-lighting factor by wall orientation — walls running
+        // one way read lighter, the perpendicular ones darker — which is what
+        // actually reads as volume in an axonometric drawing with no real
+        // light source to shade from.
+        let fillOpacity = 0.36 * lightingFactor(for: segment) * (1 - progress)
         if fillOpacity > 0.001 {
             context.fill(face, with: .color(strokeColor(for: segment).opacity(fillOpacity)))
         }
@@ -258,6 +264,7 @@ struct RoomMorphView: View, Animatable {
         let color = Theme.ink.opacity(0.28)
         let lineStyle = StrokeStyle(lineWidth: 1.2, lineCap: .round)
 
+        context.fill(polygon(atHeight: prism.top), with: .color(Theme.ink.opacity(0.08 * (1 - progress))))
         context.stroke(polygon(atHeight: prism.top), with: .color(color), style: lineStyle)
 
         guard progress < 0.999 else { return }
@@ -302,6 +309,32 @@ struct RoomMorphView: View, Animatable {
     }
 
     // MARK: - Style
+
+    /// Two fixed shades by the wall's orientation in the room's own frame
+    /// (not the camera's), so it stays consistent as the user rotates the view.
+    private func lightingFactor(for segment: FloorPlan.Segment) -> Double {
+        abs(cos(segment.angle)) > abs(sin(segment.angle)) ? 1.0 : 0.6
+    }
+
+    /// A room outline traced from the wall chain and filled faintly, so the
+    /// dollhouse reads as standing on a floor rather than a set of walls
+    /// floating over nothing.
+    private func drawFloor(in context: inout GraphicsContext, projection: Projection, fit: Fit) {
+        let walls = plan.walls
+        guard !walls.isEmpty else { return }
+
+        var path = Path()
+        let firstPoint = fit.place(projection.project(walls[0].start, height: walls[0].baseHeightMeters))
+        path.move(to: firstPoint)
+        for wall in walls {
+            let point = fit.place(projection.project(wall.end, height: wall.baseHeightMeters))
+            guard point.x.isFinite, point.y.isFinite else { continue }
+            path.addLine(to: point)
+        }
+        path.closeSubpath()
+
+        context.fill(path, with: .color(Theme.ink.opacity(0.05)))
+    }
 
     private func strokeColor(for segment: FloorPlan.Segment) -> Color {
         switch segment.category {
