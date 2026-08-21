@@ -56,11 +56,11 @@ struct HomeView: View {
             }
             .navigationTitle("Structura")
             .fullScreenCover(isPresented: $isPresentingCapture) {
-                CaptureView { room in
+                CaptureView { structure in
                     isSaving = true
                     Task {
                         let name = "Escaneo \(store.scans.count + 1)"
-                        let saved = await store.save(capturedRoom: room, name: name)
+                        let saved = await store.save(capturedStructure: structure, name: name)
                         isSaving = false
                         if saved == nil {
                             Haptics.warning()
@@ -95,8 +95,8 @@ struct HomeView: View {
     /// Most recent scan's geometry, for the paywall's decorative backdrop.
     private var latestPlan: FloorPlan? {
         guard let latest = store.scans.first,
-              let room = store.capturedRoom(for: latest) else { return nil }
-        return FloorPlan(room: room)
+              let structure = store.capturedStructure(for: latest) else { return nil }
+        return FloorPlan(structure: structure)
     }
 
     private var errorPresented: Binding<Bool> {

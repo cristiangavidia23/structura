@@ -112,10 +112,14 @@ struct FloorPlan {
     /// the grid-angle estimate and show up as a bogus 0.00 m entry.
     private static let minimumSegmentLength = 0.05
 
-    init(room: CapturedRoom, squareTolerance: Double = 5 * .pi / 180) {
-        var collected = Self.makeSegments(from: room)
+    /// `CapturedStructure` rather than `CapturedRoom`: every scan, single-room
+    /// or multi-room, goes through `StructureBuilder`, so this only needs to
+    /// know one shape of input — the merged walls/doors/windows already span
+    /// the whole property, not just one room.
+    init(structure: CapturedStructure, squareTolerance: Double = 5 * .pi / 180) {
+        var collected = Self.makeSegments(from: structure)
             .filter { $0.lengthMeters >= Self.minimumSegmentLength }
-        var objects = Self.makeFurniture(from: room)
+        var objects = Self.makeFurniture(from: structure)
 
         let grid = Self.dominantGridAngle(of: collected.filter { $0.category == .wall })
         Self.snap(&collected, toGrid: grid, tolerance: squareTolerance)
@@ -152,15 +156,15 @@ struct FloorPlan {
             bounds = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
         }
 
-        floorAreaSquareMeters = room.floors.reduce(0) { total, floor in
+        floorAreaSquareMeters = structure.floors.reduce(0) { total, floor in
             total + Double(floor.dimensions.x) * Double(floor.dimensions.y)
         }
-        wallHeightMeters = room.walls.map { Double($0.dimensions.y) }.max() ?? 0
+        wallHeightMeters = structure.walls.map { Double($0.dimensions.y) }.max() ?? 0
     }
 
     // MARK: - Construction
 
-    private static func makeSegments(from room: CapturedRoom) -> [Segment] {
+    private static func makeSegments(from structure: CapturedStructure) -> [Segment] {
         var collected: [Segment] = []
 
         func append(_ surfaces: [CapturedRoom.Surface], category: Segment.Category) {
@@ -190,15 +194,15 @@ struct FloorPlan {
             }
         }
 
-        append(room.walls, category: .wall)
-        append(room.doors, category: .door)
-        append(room.windows, category: .window)
-        append(room.openings, category: .opening)
+        append(structure.walls, category: .wall)
+        append(structure.doors, category: .door)
+        append(structure.windows, category: .window)
+        append(structure.openings, category: .opening)
         return collected
     }
 
-    private static func makeFurniture(from room: CapturedRoom) -> [Furniture] {
-        room.objects.map { object in
+    private static func makeFurniture(from structure: CapturedStructure) -> [Furniture] {
+        structure.objects.map { object in
             let halfX = object.dimensions.x / 2
             let halfZ = object.dimensions.z / 2
             let localCorners: [simd_float4] = [

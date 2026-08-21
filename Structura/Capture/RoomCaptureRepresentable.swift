@@ -4,7 +4,9 @@ import RoomPlan
 final class CaptureCoordinator: NSObject, ObservableObject, RoomCaptureViewDelegate, RoomCaptureSessionDelegate {
     weak var captureView: RoomCaptureView?
     @Published var errorMessage: String?
-    var onFinish: ((CapturedRoom) -> Void)?
+    /// Fires once per room, whether it's the first or the fourth — multi-room
+    /// capture is just calling `start()` again after this instead of finishing.
+    var onRoomFinished: ((CapturedRoom) -> Void)?
 
     override init() {
         super.init()
@@ -48,7 +50,7 @@ final class CaptureCoordinator: NSObject, ObservableObject, RoomCaptureViewDeleg
             return
         }
         DispatchQueue.main.async {
-            self.onFinish?(processedResult)
+            self.onRoomFinished?(processedResult)
         }
     }
 }

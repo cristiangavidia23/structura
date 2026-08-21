@@ -5,7 +5,15 @@ struct CaptureView: View {
     @StateObject private var coordinator = CaptureCoordinator()
     @Environment(\.dismiss) private var dismiss
 
-    var onFinish: (CapturedRoom) -> Void
+    var onFinish: (CapturedStructure) -> Void
+
+    /// Rooms captured so far this session. Multi-room is just "keep scanning
+    /// instead of finishing" — every capture, including a single room, ends by
+    /// building a CapturedStructure from whatever accumulated here.
+    @State private var capturedRooms: [CapturedRoom] = []
+    @State private var isPresentingRoomChoice = false
+    @State private var isBuildingStructure = false
+    @State private var buildErrorMessage: String?
 
     var body: some View {
         Group {
@@ -22,12 +30,20 @@ struct CaptureView: View {
                         .frame(maxHeight: .infinity, alignment: .top)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                    overlay
+                    roomBadge
+                        .frame(maxHeight: .infinity, alignment: .top)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+
+                    if isBuildingStructure {
+                        buildingOverlay
+                    } else if !isPresentingRoomChoice {
+                        overlay
+                    }
                 }
                 .onAppear {
-                    coordinator.onFinish = { room in
-                        onFinish(room)
-                        dismiss()
+                    coordinator.onRoomFinished = { room in
+                        capturedRooms.append(room)
+                        isPresentingRoomChoice = true
                     }
                     coordinator.start()
                 }
@@ -38,6 +54,17 @@ struct CaptureView: View {
                     Button("Cerrar", role: .cancel) { dismiss() }
                 } message: {
                     Text(coordinator.errorMessage ?? "")
+                }
+                .alert("No se pudo combinar los ambientes", isPresented: buildErrorPresented) {
+                    Button("Cerrar", role: .cancel) { dismiss() }
+                } message: {
+                    Text(buildErrorMessage ?? "")
+                }
+                .sheet(isPresented: $isPresentingRoomChoice) {
+                    roomChoiceSheet
+                        .presentationDetents([.height(220)])
+                        .presentationDragIndicator(.visible)
+                        .interactiveDismissDisabled()
                 }
             } else {
                 unsupportedDevice
@@ -51,6 +78,13 @@ struct CaptureView: View {
             set: { isPresented in
                 if !isPresented { coordinator.errorMessage = nil }
             }
+        )
+    }
+
+    private var buildErrorPresented: Binding<Bool> {
+        Binding(
+            get: { buildErrorMessage != nil },
+            set: { isPresented in if !isPresented { buildErrorMessage = nil } }
         )
     }
 
@@ -70,6 +104,18 @@ struct CaptureView: View {
         .accessibilityLabel("Cancelar")
     }
 
+    private var roomBadge: some View {
+        Text("Ambiente \(capturedRooms.count + 1)")
+            .font(.caption.weight(.semibold))
+            .monospacedDigit()
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(.black.opacity(0.5), in: Capsule())
+            .padding(.trailing, 20)
+            .padding(.top, 16)
+    }
+
     private var overlay: some View {
         Button {
             Haptics.tap()
@@ -84,6 +130,67 @@ struct CaptureView: View {
                 .shadow(color: .black.opacity(0.3), radius: 8, y: 3)
         }
         .padding(.bottom, 28)
+    }
+
+    private var buildingOverlay: some View {
+        VStack(spacing: 12) {
+            ProgressView().tint(.white)
+            Text("Combinando ambientes…")
+                .font(.subheadline)
+                .foregroundStyle(.white)
+        }
+        .padding(.bottom, 40)
+    }
+
+    private var roomChoiceSheet: some View {
+        VStack(spacing: 16) {
+            VStack(spacing: 4) {
+                Text(capturedRooms.count == 1 ? "Ambiente escaneado" : "\(capturedRooms.count) ambientes escaneados")
+                    .font(.headline)
+                    .foregroundStyle(Theme.ink)
+                Text("¿Quieres escanear otro ambiente de la misma propiedad, o ya terminaste?")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.ink.opacity(0.6))
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.top, 8)
+
+            Button {
+                isPresentingRoomChoice = false
+                coordinator.start()
+            } label: {
+                Text("Agregar otro ambiente")
+            }
+            .buttonStyle(.primary)
+
+            Button {
+                isPresentingRoomChoice = false
+                finish()
+            } label: {
+                Text("Finalizar")
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(Theme.ink)
+            }
+        }
+        .padding(20)
+        .background(Theme.paper)
+    }
+
+    /// StructureBuilder needs at least one room; it's what turns "just scan"
+    /// and "scan a whole house" into the same code path.
+    private func finish() {
+        isBuildingStructure = true
+        Task {
+            do {
+                let structure = try await StructureBuilder(options: []).capturedStructure(from: capturedRooms)
+                isBuildingStructure = false
+                onFinish(structure)
+                dismiss()
+            } catch {
+                isBuildingStructure = false
+                buildErrorMessage = error.localizedDescription
+            }
+        }
     }
 
     private var unsupportedDevice: some View {

@@ -27,10 +27,10 @@ final class ScanStore: ObservableObject {
         return scansDirectory.appendingPathComponent(name)
     }
 
-    func capturedRoom(for record: ScanRecord) -> CapturedRoom? {
+    func capturedStructure(for record: ScanRecord) -> CapturedStructure? {
         let url = scansDirectory.appendingPathComponent(record.roomFileName)
         guard let data = try? Data(contentsOf: url) else { return nil }
-        return try? JSONDecoder().decode(CapturedRoom.self, from: data)
+        return try? JSONDecoder().decode(CapturedStructure.self, from: data)
     }
 
     func delete(_ record: ScanRecord) {
@@ -44,23 +44,23 @@ final class ScanStore: ObservableObject {
     }
 
     /// Returns `nil` if the USDZ export itself fails — the one file every other
-    /// screen depends on (dollhouse projection, share sheet). A room-data or
-    /// thumbnail failure is tolerated: `capturedRoom(for:)` and the card's
+    /// screen depends on (dollhouse projection, share sheet). A structure-data or
+    /// thumbnail failure is tolerated: `capturedStructure(for:)` and the card's
     /// fallback icon already degrade gracefully without them.
     @discardableResult
-    func save(capturedRoom: CapturedRoom, name: String) async -> ScanRecord? {
+    func save(capturedStructure: CapturedStructure, name: String) async -> ScanRecord? {
         let id = UUID()
         let usdzFileName = "\(id.uuidString).usdz"
         let usdzURL = scansDirectory.appendingPathComponent(usdzFileName)
 
         do {
-            try capturedRoom.export(to: usdzURL, exportOptions: .parametric)
+            try capturedStructure.export(to: usdzURL, exportOptions: .parametric)
         } catch {
             return nil
         }
 
         let roomFileName = "\(id.uuidString)_room.json"
-        if let roomData = try? JSONEncoder().encode(capturedRoom) {
+        if let roomData = try? JSONEncoder().encode(capturedStructure) {
             try? roomData.write(to: scansDirectory.appendingPathComponent(roomFileName), options: .atomic)
         }
 

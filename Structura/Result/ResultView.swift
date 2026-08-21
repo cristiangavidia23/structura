@@ -22,7 +22,7 @@ struct ResultView: View {
     }
 
     private var plan: FloorPlan? {
-        store.capturedRoom(for: scan).map { FloorPlan(room: $0) }
+        store.capturedStructure(for: scan).map { FloorPlan(structure: $0) }
     }
 
     var body: some View {
