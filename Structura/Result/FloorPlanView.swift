@@ -56,15 +56,14 @@ struct FloorPlanView: View {
     /// A room outline traced from the wall chain and filled faintly, so the
     /// plan reads as standing on a floor rather than a set of disconnected lines.
     private func drawFloor(in context: inout GraphicsContext, fit: Fit) {
-        let walls = plan.walls
-        guard !walls.isEmpty else { return }
-
         var path = Path()
-        path.move(to: fit.place(walls[0].start))
-        for wall in walls {
-            path.addLine(to: fit.place(wall.end))
+        for polygon in plan.floorPolygons {
+            path.move(to: fit.place(polygon[0]))
+            for point in polygon.dropFirst() {
+                path.addLine(to: fit.place(point))
+            }
+            path.closeSubpath()
         }
-        path.closeSubpath()
         context.fill(path, with: .color(Theme.ink.opacity(0.05)))
     }
 

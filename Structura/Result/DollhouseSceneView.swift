@@ -120,12 +120,16 @@ private enum SceneBuilder {
     // MARK: - Geometry
 
     private static func floorPath(from plan: FloorPlan) -> UIBezierPath? {
-        let walls = plan.walls
-        guard !walls.isEmpty else { return nil }
+        let polygons = plan.floorPolygons
+        guard !polygons.isEmpty else { return nil }
         let path = UIBezierPath()
-        path.move(to: walls[0].start)
-        for wall in walls { path.addLine(to: wall.end) }
-        path.close()
+        for polygon in polygons {
+            path.move(to: polygon[0])
+            for point in polygon.dropFirst() {
+                path.addLine(to: point)
+            }
+            path.close()
+        }
         return path
     }
 

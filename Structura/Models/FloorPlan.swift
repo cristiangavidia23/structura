@@ -95,6 +95,41 @@ struct FloorPlan {
     var outOfSquareWalls: [Segment] { walls.filter(\.isOutOfSquare) }
     var unreliableWalls: [Segment] { walls.filter { !$0.isReliable } }
 
+    /// Floor outline(s) traced by chaining each wall to its nearest unused
+    /// neighbor, rather than assuming `walls` is already in perimeter order —
+    /// RoomPlan does not guarantee that, especially for multi-room structures,
+    /// and building a naive polygon straight from array order can produce a
+    /// self-intersecting shape (seen in practice as a stray disconnected
+    /// triangle when extruded). Can return more than one polygon for
+    /// structures with separate, non-adjoining rooms.
+    var floorPolygons: [[CGPoint]] {
+        let tolerance = 0.5
+        var remaining = walls
+        var polygons: [[CGPoint]] = []
+
+        while !remaining.isEmpty {
+            let first = remaining.removeFirst()
+            var polygon: [CGPoint] = [first.start, first.end]
+            var cursor = first.end
+
+            while let matchIndex = remaining.firstIndex(where: {
+                hypot($0.start.x - cursor.x, $0.start.y - cursor.y) <= tolerance
+                    || hypot($0.end.x - cursor.x, $0.end.y - cursor.y) <= tolerance
+            }) {
+                let wall = remaining.remove(at: matchIndex)
+                let startsAtCursor = hypot(wall.start.x - cursor.x, wall.start.y - cursor.y) <= tolerance
+                let nextPoint = startsAtCursor ? wall.end : wall.start
+                polygon.append(nextPoint)
+                cursor = nextPoint
+            }
+
+            if polygon.count >= 3 {
+                polygons.append(polygon)
+            }
+        }
+        return polygons
+    }
+
     var perimeterMeters: Double {
         walls.reduce(0) { $0 + $1.lengthMeters }
     }
