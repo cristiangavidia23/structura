@@ -142,12 +142,18 @@ struct ResultView: View {
     @ViewBuilder
     private var content: some View {
         if let plan {
-            RoomMorphView(
-                plan: plan,
-                unitSystem: unitSystem,
-                progress: mode == .plan ? 1 : 0
-            )
-            .padding(8)
+            Group {
+                switch mode {
+                case .dollhouse:
+                    DollhouseSceneView(plan: plan)
+                        .transition(.opacity.combined(with: .scale(scale: 0.97)))
+                case .plan:
+                    FloorPlanView(plan: plan, unitSystem: unitSystem)
+                        .padding(8)
+                        .transition(.opacity.combined(with: .scale(scale: 1.03)))
+                }
+            }
+            .id(mode)
         } else {
             Text("No se pudo cargar la geometría del escaneo.")
                 .font(.subheadline)
