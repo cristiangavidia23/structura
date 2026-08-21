@@ -11,6 +11,8 @@ struct ResultView: View {
     @State private var shareURL: URL?
     @State private var isPresentingShare = false
     @State private var isPresentingPaywall = false
+    @State private var isRenaming = false
+    @State private var renameText = ""
 
     private enum Mode: String, CaseIterable {
         case dollhouse = "3D"
@@ -25,6 +27,13 @@ struct ResultView: View {
         store.capturedStructure(for: scan).map { FloorPlan(structure: $0) }
     }
 
+    /// `scan` is a value-type snapshot from when this view was pushed; reading
+    /// the name back from the store keeps it live after a rename instead of
+    /// showing stale text until the view is popped and re-pushed.
+    private var currentScan: ScanRecord {
+        store.scans.first { $0.id == scan.id } ?? scan
+    }
+
     var body: some View {
         ZStack {
             Theme.paper.ignoresSafeArea()
@@ -34,7 +43,7 @@ struct ResultView: View {
                 content
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                if let plan {
+                if let plan, !plan.walls.isEmpty {
                     VStack(spacing: 0) {
                         if mode == .plan, let caveat = caveat(for: plan) {
                             Text(caveat)
@@ -72,7 +81,7 @@ struct ResultView: View {
                 }
             }
         }
-        .navigationTitle(scan.name)
+        .navigationTitle(currentScan.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -83,6 +92,15 @@ struct ResultView: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 160)
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    renameText = currentScan.name
+                    isRenaming = true
+                } label: {
+                    Image(systemName: "pencil")
+                }
+                .accessibilityLabel("Renombrar")
             }
             if let plan {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -99,12 +117,19 @@ struct ResultView: View {
         .sheet(isPresented: $isPresentingPaywall) {
             PaywallView(backgroundPlan: plan)
         }
+        .alert("Renombrar escaneo", isPresented: $isRenaming) {
+            TextField("Nombre", text: $renameText)
+            Button("Cancelar", role: .cancel) {}
+            Button("Guardar") {
+                store.rename(currentScan, to: renameText)
+            }
+        }
     }
 
     private func exportMenu(for plan: FloorPlan) -> some View {
         Menu {
             Button {
-                exportOrPaywall { share(PDFExporter.export(scan: scan, plan: plan, unitSystem: unitSystem)) }
+                exportOrPaywall { share(PDFExporter.export(scan: currentScan, plan: plan, unitSystem: unitSystem)) }
             } label: {
                 Label("Plano acotado (PDF)", systemImage: "doc.richtext")
             }
@@ -114,7 +139,7 @@ struct ResultView: View {
                 Label("Modelo 3D (USDZ)", systemImage: "cube")
             }
             Button {
-                exportOrPaywall { share(CSVExporter.export(scan: scan, plan: plan)) }
+                exportOrPaywall { share(CSVExporter.export(scan: currentScan, plan: plan)) }
             } label: {
                 Label("Medidas (CSV)", systemImage: "tablecells")
             }
@@ -141,7 +166,7 @@ struct ResultView: View {
 
     @ViewBuilder
     private var content: some View {
-        if let plan {
+        if let plan, !plan.walls.isEmpty {
             Group {
                 switch mode {
                 case .dollhouse:
@@ -154,10 +179,32 @@ struct ResultView: View {
                 }
             }
             .id(mode)
+        } else if plan != nil {
+            emptyGeometryState
         } else {
             Text("No se pudo cargar la geometría del escaneo.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.ink.opacity(0.6))
+        }
+    }
+
+    /// The geometry loaded but has no walls — a scan that ended almost
+    /// immediately, or one done from too far to detect any surface. Distinct
+    /// from a load failure: here the file is fine, the capture just didn't
+    /// pick up a room.
+    private var emptyGeometryState: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "viewfinder")
+                .font(.system(size: 30))
+                .foregroundStyle(Theme.ink.opacity(0.3))
+            Text("No se detectaron paredes en este escaneo")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Theme.ink)
+            Text("Puede pasar si el escaneo terminó muy pronto. Intenta escanear de nuevo, moviéndote más despacio y apuntando a las paredes.")
+                .font(.caption)
+                .foregroundStyle(Theme.ink.opacity(0.6))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
         }
     }
 

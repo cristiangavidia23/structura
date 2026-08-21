@@ -34,12 +34,19 @@ struct CaptureView: View {
                         .frame(maxHeight: .infinity, alignment: .top)
                         .frame(maxWidth: .infinity, alignment: .trailing)
 
+                    if let instruction = coordinator.instructionText {
+                        instructionBanner(instruction)
+                            .frame(maxHeight: .infinity, alignment: .top)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+
                     if isBuildingStructure {
                         buildingOverlay
                     } else if !isPresentingRoomChoice {
                         overlay
                     }
                 }
+                .animation(.easeInOut(duration: 0.25), value: coordinator.instructionText)
                 .onAppear {
                     coordinator.onRoomFinished = { room in
                         capturedRooms.append(room)
@@ -114,6 +121,19 @@ struct CaptureView: View {
             .background(.black.opacity(0.5), in: Capsule())
             .padding(.trailing, 20)
             .padding(.top, 16)
+    }
+
+    private func instructionBanner(_ text: String) -> some View {
+        Text(text)
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(.white)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
+            .background(Theme.accent.opacity(0.92), in: Capsule())
+            .shadow(color: .black.opacity(0.3), radius: 6, y: 2)
+            .padding(.horizontal, 60)
+            .padding(.top, 68)
     }
 
     private var overlay: some View {

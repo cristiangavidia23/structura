@@ -8,6 +8,8 @@ struct HomeView: View {
     @State private var isPresentingPaywall = false
     @State private var isSaving = false
     @State private var saveErrorMessage: String?
+    @State private var renamingScan: ScanRecord?
+    @State private var renameText = ""
 
     /// v1 pricing: the first scan is free (export is what's gated, not scanning
     /// it); any scan beyond that needs premium.
@@ -38,6 +40,12 @@ struct HomeView: View {
                                 }
                                 .buttonStyle(.plain)
                                 .contextMenu {
+                                    Button {
+                                        renameText = scan.name
+                                        renamingScan = scan
+                                    } label: {
+                                        Label("Renombrar", systemImage: "pencil")
+                                    }
                                     Button(role: .destructive) {
                                         Haptics.warning()
                                         store.delete(scan)
@@ -76,6 +84,16 @@ struct HomeView: View {
             } message: {
                 Text(saveErrorMessage ?? "")
             }
+            .alert("Renombrar escaneo", isPresented: renamingPresented) {
+                TextField("Nombre", text: $renameText)
+                Button("Cancelar", role: .cancel) { renamingScan = nil }
+                Button("Guardar") {
+                    if let renamingScan {
+                        store.rename(renamingScan, to: renameText)
+                    }
+                    renamingScan = nil
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
@@ -103,6 +121,13 @@ struct HomeView: View {
         Binding(
             get: { saveErrorMessage != nil },
             set: { isPresented in if !isPresented { saveErrorMessage = nil } }
+        )
+    }
+
+    private var renamingPresented: Binding<Bool> {
+        Binding(
+            get: { renamingScan != nil },
+            set: { isPresented in if !isPresented { renamingScan = nil } }
         )
     }
 

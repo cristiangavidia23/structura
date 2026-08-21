@@ -33,6 +33,13 @@ final class ScanStore: ObservableObject {
         return try? JSONDecoder().decode(CapturedStructure.self, from: data)
     }
 
+    func rename(_ record: ScanRecord, to newName: String) {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let index = scans.firstIndex(where: { $0.id == record.id }) else { return }
+        scans[index].name = trimmed
+        persist()
+    }
+
     func delete(_ record: ScanRecord) {
         scans.removeAll { $0.id == record.id }
         try? FileManager.default.removeItem(at: usdzURL(for: record))

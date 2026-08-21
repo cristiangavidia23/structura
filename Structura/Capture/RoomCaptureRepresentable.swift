@@ -4,6 +4,11 @@ import RoomPlan
 final class CaptureCoordinator: NSObject, ObservableObject, RoomCaptureViewDelegate, RoomCaptureSessionDelegate {
     weak var captureView: RoomCaptureView?
     @Published var errorMessage: String?
+    /// Live guidance RoomPlan itself emits during scanning ("move closer",
+    /// "slow down"...) — surfacing it is the highest-leverage thing we can do
+    /// for scan quality, since it's the same signal that decides how much of
+    /// the room ends up inferred instead of actually measured.
+    @Published var instructionText: String?
     /// Fires once per room, whether it's the first or the fourth — multi-room
     /// capture is just calling `start()` again after this instead of finishing.
     var onRoomFinished: ((CapturedRoom) -> Void)?
@@ -33,6 +38,25 @@ final class CaptureCoordinator: NSObject, ObservableObject, RoomCaptureViewDeleg
     func captureSession(_ session: RoomCaptureSession, didFail error: Error) {
         DispatchQueue.main.async {
             self.errorMessage = error.localizedDescription
+        }
+    }
+
+    func captureSession(_ session: RoomCaptureSession, didProvide instruction: RoomCaptureSession.Instruction) {
+        let text = Self.text(for: instruction)
+        DispatchQueue.main.async {
+            self.instructionText = text
+        }
+    }
+
+    private static func text(for instruction: RoomCaptureSession.Instruction) -> String? {
+        switch instruction {
+        case .moveCloseToWall: return "Acércate más a la pared"
+        case .moveAwayFromWall: return "Aléjate un poco de la pared"
+        case .slowDown: return "Muévete más despacio"
+        case .turnOnLight: return "Hay poca luz — enciende una lámpara"
+        case .lowTexture: return "Apunta a una superficie con más detalle"
+        case .normal: return nil
+        @unknown default: return nil
         }
     }
 
