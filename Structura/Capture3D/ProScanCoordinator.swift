@@ -1,5 +1,6 @@
 import ARKit
 import Combine
+import UIKit
 
 /// Orchestrates the Pro Scan second pass: the raw ARKit session, its
 /// derived point cloud store, performance metrics, the Metal ring buffer,
@@ -39,12 +40,12 @@ final class ProScanCoordinator: ObservableObject {
         }
     }
 
-    func start() {
+    func start(viewportSize: CGSize, interfaceOrientation: UIInterfaceOrientation) {
         guard Self.isSupported, !isRunning else { return }
         pointCloudStore.reset()
         performanceMonitor.start()
         hapticEngine.start()
-        arSession.start()
+        arSession.start(viewportSize: viewportSize, interfaceOrientation: interfaceOrientation)
         isRunning = true
     }
 

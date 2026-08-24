@@ -1,5 +1,6 @@
 import ARKit
 import CoreVideo
+import UIKit
 
 /// Raw ARKit second pass ("Pro Scan"): runs only after RoomPlan's
 /// `RoomCaptureSession` has fully stopped, since ARKit allows a single
@@ -12,6 +13,12 @@ final class ARPointCloudSession: NSObject {
     /// Every pixel would be far more data than needed for a live heatmap or
     /// a reasonably sized export; sample a coarse grid instead.
     private let pixelStride = 8
+
+    /// Fixed at `start()` and reused per-frame from a background queue —
+    /// reading `UIScreen`/orientation live on every frame would touch
+    /// main-thread-affined UIKit state from `processingQueue`.
+    private var viewportSize = CGSize(width: 390, height: 844)
+    private var interfaceOrientation: UIInterfaceOrientation = .portrait
 
     var onFrame: ((PointCloudFrame) -> Void)?
     var onTrackingState: ((ARCamera.TrackingState) -> Void)?
@@ -26,7 +33,9 @@ final class ARPointCloudSession: NSObject {
         session.delegate = self
     }
 
-    func start() {
+    func start(viewportSize: CGSize, interfaceOrientation: UIInterfaceOrientation) {
+        self.viewportSize = viewportSize
+        self.interfaceOrientation = interfaceOrientation
         guard Self.isSupported else { return }
         let configuration = ARWorldTrackingConfiguration()
         configuration.sceneReconstruction = .meshWithClassification
@@ -110,7 +119,21 @@ final class ARPointCloudSession: NSObject {
             y += pixelStride
         }
 
-        let processed = PointCloudFrame(positions: positions, confidences: confidences, timestamp: frame.timestamp)
+        let viewMatrix = frame.camera.viewMatrix(for: interfaceOrientation)
+        let projectionMatrix = frame.camera.projectionMatrix(
+            for: interfaceOrientation,
+            viewportSize: viewportSize,
+            zNear: 0.05,
+            zFar: 20
+        )
+
+        let processed = PointCloudFrame(
+            positions: positions,
+            confidences: confidences,
+            timestamp: frame.timestamp,
+            viewMatrix: viewMatrix,
+            projectionMatrix: projectionMatrix
+        )
         onFrame?(processed)
     }
 }

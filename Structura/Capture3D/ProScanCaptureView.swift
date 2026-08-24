@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// The Pro Scan second pass: a standalone full-screen capture using raw
 /// ARKit + Metal, run only after RoomPlan's session has fully stopped (see
@@ -56,7 +57,15 @@ struct ProScanCaptureView: View {
                         .padding(.bottom, 100)
                     }
                 }
-                .onAppear { proScan.start() }
+                .onAppear {
+                    let scene = UIApplication.shared.connectedScenes
+                        .compactMap { $0 as? UIWindowScene }
+                        .first
+                    proScan.start(
+                        viewportSize: UIScreen.main.bounds.size,
+                        interfaceOrientation: scene?.interfaceOrientation ?? .portrait
+                    )
+                }
                 .onDisappear { proScan.stop() }
                 .alert("No se pudo exportar", isPresented: errorPresented) {
                     Button("Cerrar", role: .cancel) { exportError = nil }

@@ -7,13 +7,19 @@ import MetalKit
 struct PointCloudMetalView: UIViewRepresentable {
     let ringBuffer: PointCloudRingBuffer
 
+    /// Shared between the view and its renderer so both draw against the
+    /// same `MTLDevice` instance — buffers made on one device are not valid
+    /// to draw with another.
+    private let device = MTLCreateSystemDefaultDevice()
+
     func makeCoordinator() -> MetalPointCloudRenderer? {
-        MetalPointCloudRenderer(ringBuffer: ringBuffer)
+        guard let device else { return nil }
+        return MetalPointCloudRenderer(device: device, ringBuffer: ringBuffer)
     }
 
     func makeUIView(context: Context) -> MTKView {
         let view = MTKView()
-        view.device = MTLCreateSystemDefaultDevice()
+        view.device = device
         view.colorPixelFormat = .bgra8Unorm
         view.preferredFramesPerSecond = 30
         view.isPaused = false
