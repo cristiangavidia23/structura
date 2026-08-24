@@ -101,10 +101,19 @@ final class ARPointCloudSession: NSObject {
             confidenceHeight = CVPixelBufferGetHeight(confidenceMap)
         }
 
+        // `camera.intrinsics` is calibrated for the full camera image
+        // resolution (~1920x1440), not the depth map's much smaller
+        // resolution (~256x192) — using it unscaled against depth-map pixel
+        // coordinates puts the optical center miles off and throws every
+        // unprojected point far outside the view frustum. Scale fx/fy/cx/cy
+        // down to the depth map's resolution first.
         let intrinsics = frame.camera.intrinsics
         let cameraTransform = frame.camera.transform
-        let fx = intrinsics[0][0], fy = intrinsics[1][1]
-        let cx = intrinsics[2][0], cy = intrinsics[2][1]
+        let imageResolution = frame.camera.imageResolution
+        let scaleX = Float(width) / Float(imageResolution.width)
+        let scaleY = Float(height) / Float(imageResolution.height)
+        let fx = intrinsics[0][0] * scaleX, fy = intrinsics[1][1] * scaleY
+        let cx = intrinsics[2][0] * scaleX, cy = intrinsics[2][1] * scaleY
 
         var positions: [SIMD3<Float>] = []
         var confidences: [Float] = []
