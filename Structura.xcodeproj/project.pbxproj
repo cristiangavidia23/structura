@@ -7,66 +7,110 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0239007327DED7E1B1D3B0C1 /* HapticPatterns.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EC478D9EEAFA943B5E7DFC7 /* HapticPatterns.swift */; };
 		039F6D7201A15CB8C4973DB6 /* CSVExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34EE01AB83E39C24C3CD2677 /* CSVExporter.swift */; };
+		05FD37E466497131F9199E05 /* PointCloudExportModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4777BD520CD3D0D69CBE6743 /* PointCloudExportModels.swift */; };
 		068AF9DFCA660426EF2D1FA2 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001C02F9A7CB5D73E04A3065 /* ActivityView.swift */; };
+		0A68BD55DDC1FC539D55C494 /* PointCloudExportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 002C3DC9CCDE497EF3463E26 /* PointCloudExportCoordinator.swift */; };
 		107B7208591424E8291D3979 /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBAF40F0AD07E417D2B06870 /* PurchaseManager.swift */; };
+		12E1DE3D98AAD735D94AF1B0 /* ProScanCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8175C70C7652CD6AB090211 /* ProScanCaptureView.swift */; };
+		2510A9370F2D59B9389A1D11 /* PointCloudTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 540CA5941A41374498883C58 /* PointCloudTypes.swift */; };
 		3B64A9FBA94EC287070C23CF /* CornerBrackets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A54ECCBFE7B5F5AEE59C49EF /* CornerBrackets.swift */; };
 		3F1398B8AEF92E7B2EE13FA5 /* PDFExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67C5CD0BC15A87A0AB74E5BD /* PDFExporter.swift */; };
 		4788EC9B50127DCD5BD71B88 /* DollhouseSceneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B9B861B85EFC434FDBFAFAC /* DollhouseSceneView.swift */; };
 		49B7CB83FFF47DE920E7F834 /* GraphPaperBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11138480935319AAE2C1B695 /* GraphPaperBackground.swift */; };
 		4D6F9E0DF437D1BCB2E91811 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = C2A3EEBCDBE2E8B8FE50ECCC /* RevenueCat */; };
+		515FCB68AA50891A8C391BAE /* RingBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200842F6CDDD045BE845A5E /* RingBuffer.swift */; };
 		540E4E05FC31D406F8BDC7A6 /* FloorPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7ACE7847F9A758B78A183FD /* FloorPlanView.swift */; };
 		568BD69819C863FE264B56B9 /* BlueprintBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B01C9230240DE02C68C495B /* BlueprintBackdrop.swift */; };
 		5B832F4D8AC146DCEF4A83A2 /* StructuraApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FE458FE3C3369BCAE73208A /* StructuraApp.swift */; };
 		5DB9295BAB09B8C15E80AA8A /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83AE0C3A1CE9AA9883A95E13 /* HomeView.swift */; };
+		5E1234A5AC3A6621ECB10352 /* PointCloudStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 585CAC98AE573C3D54CA8699 /* PointCloudStore.swift */; };
+		60385EE02E3D3CE456560DD2 /* HapticEngineManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F04F54D7B211217FC2F7D358 /* HapticEngineManager.swift */; };
 		63B3680B29F4C12AD8271A1D /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7951C17A6CBF4A1CC20EE401 /* CaptureView.swift */; };
 		6FE324EDAAA0A95D5973973C /* SketchBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9AE11DBB56EE92B5291A229 /* SketchBackdrop.swift */; };
+		7506E1C3CF6763A6CC60AE0E /* MetricsHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = D50F9A73E22436BCB1E36225 /* MetricsHUD.swift */; };
+		7525D348155F33A64F764CD6 /* PLYExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB6F2D95C6D6213B5D41091 /* PLYExporter.swift */; };
+		7C4ECC55A08446B1DB268DEA /* PointCloudLocationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC5C3EDCC135E4F56CC74631 /* PointCloudLocationProvider.swift */; };
+		8891B15C7C957770436A1DFB /* HUDStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14AB68D1BD9177637C673405 /* HUDStyle.swift */; };
+		8BBF5964A6F7FC3B3544A312 /* ProScanCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF4C8D5040A057C0EB5825F1 /* ProScanCoordinator.swift */; };
 		8C0D8D7D0EA6FD2C021B9BAC /* LegalLinks.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7729D532E4D0E3C98E539BC /* LegalLinks.swift */; };
 		8C8AB3517A1182CFA187900F /* MeasurementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06959A398729A01CD14F0E23 /* MeasurementsView.swift */; };
+		90DDF45D836CB1263FC06074 /* PointCloudMetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B62A548674A0CAA0D196D1 /* PointCloudMetalView.swift */; };
 		9A583751901FDC76CDD5CA2C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8DF852FB48CD3854642A5602 /* Assets.xcassets */; };
 		9D6E08814FE36A6948F9D9A8 /* FloorPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8539560292F05A011D44BB /* FloorPlan.swift */; };
+		A304C588B95C7A84BAEA75EC /* LASExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71D88304888213BF9C8A97A3 /* LASExporter.swift */; };
 		AB10C18997BD74B42E6505FB /* ScanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ED71AB772D38FF5E9A434E4 /* ScanStore.swift */; };
 		ADE8A7A6FCAAC237C267A16C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F2D1BB617A4B198C03673AC /* SettingsView.swift */; };
 		B682CF5C7E2A6D4FB6107A37 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEA66209CF36225BA83E1D2F /* OnboardingView.swift */; };
 		B7138A37BE4DB4F202E22065 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3E15B20D478AC5FAE663090 /* PaywallView.swift */; };
+		B865EC6A1C1BFE9A3EA546D0 /* PerformanceMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 580B42433D5D49AF708A2CEF /* PerformanceMonitor.swift */; };
+		BBE49C11333AACF94B6B04A5 /* PointCloudFrame.swift in Sources */ = {isa = PBXBuildFile; fileRef = A27626CB4F35FE7C2AFFD087 /* PointCloudFrame.swift */; };
+		BF3721E2E323E0C880F830CA /* HapticFeedbackAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D5453CEB38F854940D01A31 /* HapticFeedbackAdapter.swift */; };
 		C63D263F638DF8C85B22E6EE /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1537BB48F60772F82768EE23 /* Theme.swift */; };
 		CFEF8CC68476CFA61F38B341 /* PrimaryButtonStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CFB7584D3FF0D3E7C1BD1EE /* PrimaryButtonStyle.swift */; };
+		D719A6388F144EC685C18D0E /* RadialToolMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = C79A086D79FB5EB1DF172C7F /* RadialToolMenu.swift */; };
 		D90A81742AF1F6505906166F /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 863FE9E182C6FF0E7485919B /* Haptics.swift */; };
+		D926D738D38EFD1368D3C8FA /* ARPointCloudSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A010EFEB6C9EDAEE8860A62 /* ARPointCloudSession.swift */; };
 		E4F256CC6E3FCA46E0BCAF9C /* ResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA76854C563F8F4C3BC05788 /* ResultView.swift */; };
 		E8646A4C4193364906670CDD /* RoomCaptureRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = E78D94B24D2AB18DA74DD4D3 /* RoomCaptureRepresentable.swift */; };
 		EC6B4FD1E91A04911C370B23 /* ScanRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F1DB39A49C2AFE040165840 /* ScanRecord.swift */; };
 		F40F67FAC6756A4521982309 /* UnitSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 731115085003FD13639169C5 /* UnitSystem.swift */; };
+		F95292B85DB1EBD8D631BE08 /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 8D1F7A23E4E5ED14359E7785 /* Shaders.metal */; };
+		FCBA6D52E692740943D7B39C /* MetalPointCloudRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93C40E11D53BCA275B002AE4 /* MetalPointCloudRenderer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		001C02F9A7CB5D73E04A3065 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
+		002C3DC9CCDE497EF3463E26 /* PointCloudExportCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PointCloudExportCoordinator.swift; sourceTree = "<group>"; };
 		06959A398729A01CD14F0E23 /* MeasurementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeasurementsView.swift; sourceTree = "<group>"; };
+		0A010EFEB6C9EDAEE8860A62 /* ARPointCloudSession.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ARPointCloudSession.swift; sourceTree = "<group>"; };
+		0FB6F2D95C6D6213B5D41091 /* PLYExporter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PLYExporter.swift; sourceTree = "<group>"; };
 		11138480935319AAE2C1B695 /* GraphPaperBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphPaperBackground.swift; sourceTree = "<group>"; };
+		14AB68D1BD9177637C673405 /* HUDStyle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HUDStyle.swift; sourceTree = "<group>"; };
 		1537BB48F60772F82768EE23 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		2ED71AB772D38FF5E9A434E4 /* ScanStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanStore.swift; sourceTree = "<group>"; };
 		2FE458FE3C3369BCAE73208A /* StructuraApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StructuraApp.swift; sourceTree = "<group>"; };
 		31C7E80545604EDE4F512B9A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		34EE01AB83E39C24C3CD2677 /* CSVExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVExporter.swift; sourceTree = "<group>"; };
-		3E24924C76C28845B801B82C /* Structura.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Structura.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3E24924C76C28845B801B82C /* Structura.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Structura.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4777BD520CD3D0D69CBE6743 /* PointCloudExportModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PointCloudExportModels.swift; sourceTree = "<group>"; };
+		540CA5941A41374498883C58 /* PointCloudTypes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PointCloudTypes.swift; sourceTree = "<group>"; };
+		56B62A548674A0CAA0D196D1 /* PointCloudMetalView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PointCloudMetalView.swift; sourceTree = "<group>"; };
+		580B42433D5D49AF708A2CEF /* PerformanceMonitor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PerformanceMonitor.swift; sourceTree = "<group>"; };
+		585CAC98AE573C3D54CA8699 /* PointCloudStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PointCloudStore.swift; sourceTree = "<group>"; };
 		67C5CD0BC15A87A0AB74E5BD /* PDFExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFExporter.swift; sourceTree = "<group>"; };
 		6B9B861B85EFC434FDBFAFAC /* DollhouseSceneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DollhouseSceneView.swift; sourceTree = "<group>"; };
 		6CFB7584D3FF0D3E7C1BD1EE /* PrimaryButtonStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButtonStyle.swift; sourceTree = "<group>"; };
+		6D5453CEB38F854940D01A31 /* HapticFeedbackAdapter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HapticFeedbackAdapter.swift; sourceTree = "<group>"; };
+		71D88304888213BF9C8A97A3 /* LASExporter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LASExporter.swift; sourceTree = "<group>"; };
 		731115085003FD13639169C5 /* UnitSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnitSystem.swift; sourceTree = "<group>"; };
 		7951C17A6CBF4A1CC20EE401 /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
 		83AE0C3A1CE9AA9883A95E13 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		863FE9E182C6FF0E7485919B /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		8B01C9230240DE02C68C495B /* BlueprintBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlueprintBackdrop.swift; sourceTree = "<group>"; };
+		8D1F7A23E4E5ED14359E7785 /* Shaders.metal */ = {isa = PBXFileReference; includeInIndex = 1; path = Shaders.metal; sourceTree = "<group>"; };
 		8DF852FB48CD3854642A5602 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		8EC478D9EEAFA943B5E7DFC7 /* HapticPatterns.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HapticPatterns.swift; sourceTree = "<group>"; };
 		8F1DB39A49C2AFE040165840 /* ScanRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanRecord.swift; sourceTree = "<group>"; };
+		93C40E11D53BCA275B002AE4 /* MetalPointCloudRenderer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetalPointCloudRenderer.swift; sourceTree = "<group>"; };
 		9F2D1BB617A4B198C03673AC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A200842F6CDDD045BE845A5E /* RingBuffer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RingBuffer.swift; sourceTree = "<group>"; };
+		A27626CB4F35FE7C2AFFD087 /* PointCloudFrame.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PointCloudFrame.swift; sourceTree = "<group>"; };
 		A54ECCBFE7B5F5AEE59C49EF /* CornerBrackets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CornerBrackets.swift; sourceTree = "<group>"; };
 		B7729D532E4D0E3C98E539BC /* LegalLinks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalLinks.swift; sourceTree = "<group>"; };
+		B8175C70C7652CD6AB090211 /* ProScanCaptureView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProScanCaptureView.swift; sourceTree = "<group>"; };
 		BEA66209CF36225BA83E1D2F /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		BF4C8D5040A057C0EB5825F1 /* ProScanCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProScanCoordinator.swift; sourceTree = "<group>"; };
+		C79A086D79FB5EB1DF172C7F /* RadialToolMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RadialToolMenu.swift; sourceTree = "<group>"; };
+		D50F9A73E22436BCB1E36225 /* MetricsHUD.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetricsHUD.swift; sourceTree = "<group>"; };
 		D7ACE7847F9A758B78A183FD /* FloorPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorPlanView.swift; sourceTree = "<group>"; };
+		DC5C3EDCC135E4F56CC74631 /* PointCloudLocationProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PointCloudLocationProvider.swift; sourceTree = "<group>"; };
 		E78D94B24D2AB18DA74DD4D3 /* RoomCaptureRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomCaptureRepresentable.swift; sourceTree = "<group>"; };
 		E9AE11DBB56EE92B5291A229 /* SketchBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchBackdrop.swift; sourceTree = "<group>"; };
 		EBAF40F0AD07E417D2B06870 /* PurchaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseManager.swift; sourceTree = "<group>"; };
 		EE8539560292F05A011D44BB /* FloorPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorPlan.swift; sourceTree = "<group>"; };
+		F04F54D7B211217FC2F7D358 /* HapticEngineManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HapticEngineManager.swift; sourceTree = "<group>"; };
 		F3E15B20D478AC5FAE663090 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		FA76854C563F8F4C3BC05788 /* ResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -97,8 +141,22 @@
 				001C02F9A7CB5D73E04A3065 /* ActivityView.swift */,
 				34EE01AB83E39C24C3CD2677 /* CSVExporter.swift */,
 				67C5CD0BC15A87A0AB74E5BD /* PDFExporter.swift */,
+				1B9688FCC7DE32A40618F022 /* PointCloud */,
 			);
 			path = Export;
+			sourceTree = "<group>";
+		};
+		1B9688FCC7DE32A40618F022 /* PointCloud */ = {
+			isa = PBXGroup;
+			children = (
+				4777BD520CD3D0D69CBE6743 /* PointCloudExportModels.swift */,
+				0FB6F2D95C6D6213B5D41091 /* PLYExporter.swift */,
+				71D88304888213BF9C8A97A3 /* LASExporter.swift */,
+				002C3DC9CCDE497EF3463E26 /* PointCloudExportCoordinator.swift */,
+				DC5C3EDCC135E4F56CC74631 /* PointCloudLocationProvider.swift */,
+			);
+			name = PointCloud;
+			path = PointCloud;
 			sourceTree = "<group>";
 		};
 		25FA356C2323911EF663E402 /* Structura */ = {
@@ -116,6 +174,9 @@
 				F408807251F71C1810098317 /* Result */,
 				69F32EDC05DDA951ADB030BD /* Settings */,
 				AB28847A67A190B855FDEF1F /* Support */,
+				AFB656469BF03107737B9545 /* Capture3D */,
+				825F5324F3D5D95F48A513DF /* Rendering */,
+				E78E44E23A4DC3D5268C61D1 /* Haptics */,
 			);
 			path = Structura;
 			sourceTree = "<group>";
@@ -145,12 +206,32 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
+		7189C0F07CD10CB773A6A5D6 /* HUD */ = {
+			isa = PBXGroup;
+			children = (
+				14AB68D1BD9177637C673405 /* HUDStyle.swift */,
+				D50F9A73E22436BCB1E36225 /* MetricsHUD.swift */,
+				C79A086D79FB5EB1DF172C7F /* RadialToolMenu.swift */,
+			);
+			name = HUD;
+			path = HUD;
+			sourceTree = "<group>";
+		};
 		822905426509DEDBF6120DBF /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				3E24924C76C28845B801B82C /* Structura.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		825F5324F3D5D95F48A513DF /* Rendering */ = {
+			isa = PBXGroup;
+			children = (
+				C5069ABC9FD24C05729EDA48 /* Metal */,
+			);
+			name = Rendering;
+			path = Rendering;
 			sourceTree = "<group>";
 		};
 		9893396A99C1584B150A48E5 /* Purchases */ = {
@@ -177,11 +258,39 @@
 			path = Support;
 			sourceTree = "<group>";
 		};
+		AFB656469BF03107737B9545 /* Capture3D */ = {
+			isa = PBXGroup;
+			children = (
+				580B42433D5D49AF708A2CEF /* PerformanceMonitor.swift */,
+				A27626CB4F35FE7C2AFFD087 /* PointCloudFrame.swift */,
+				585CAC98AE573C3D54CA8699 /* PointCloudStore.swift */,
+				0A010EFEB6C9EDAEE8860A62 /* ARPointCloudSession.swift */,
+				BF4C8D5040A057C0EB5825F1 /* ProScanCoordinator.swift */,
+				B8175C70C7652CD6AB090211 /* ProScanCaptureView.swift */,
+			);
+			name = Capture3D;
+			path = Capture3D;
+			sourceTree = "<group>";
+		};
+		C5069ABC9FD24C05729EDA48 /* Metal */ = {
+			isa = PBXGroup;
+			children = (
+				A200842F6CDDD045BE845A5E /* RingBuffer.swift */,
+				540CA5941A41374498883C58 /* PointCloudTypes.swift */,
+				8D1F7A23E4E5ED14359E7785 /* Shaders.metal */,
+				93C40E11D53BCA275B002AE4 /* MetalPointCloudRenderer.swift */,
+				56B62A548674A0CAA0D196D1 /* PointCloudMetalView.swift */,
+			);
+			name = Metal;
+			path = Metal;
+			sourceTree = "<group>";
+		};
 		D4560B239FFAF694F4388164 /* Capture */ = {
 			isa = PBXGroup;
 			children = (
 				7951C17A6CBF4A1CC20EE401 /* CaptureView.swift */,
 				E78D94B24D2AB18DA74DD4D3 /* RoomCaptureRepresentable.swift */,
+				7189C0F07CD10CB773A6A5D6 /* HUD */,
 			);
 			path = Capture;
 			sourceTree = "<group>";
@@ -194,6 +303,17 @@
 				2ED71AB772D38FF5E9A434E4 /* ScanStore.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		E78E44E23A4DC3D5268C61D1 /* Haptics */ = {
+			isa = PBXGroup;
+			children = (
+				F04F54D7B211217FC2F7D358 /* HapticEngineManager.swift */,
+				8EC478D9EEAFA943B5E7DFC7 /* HapticPatterns.swift */,
+				6D5453CEB38F854940D01A31 /* HapticFeedbackAdapter.swift */,
+			);
+			name = Haptics;
+			path = Haptics;
 			sourceTree = "<group>";
 		};
 		F408807251F71C1810098317 /* Result */ = {
@@ -240,7 +360,6 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					94CA7CF704526B65A5B788B7 = {
-						DevelopmentTeam = WREX368LLS;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -310,6 +429,28 @@
 				5B832F4D8AC146DCEF4A83A2 /* StructuraApp.swift in Sources */,
 				C63D263F638DF8C85B22E6EE /* Theme.swift in Sources */,
 				F40F67FAC6756A4521982309 /* UnitSystem.swift in Sources */,
+				B865EC6A1C1BFE9A3EA546D0 /* PerformanceMonitor.swift in Sources */,
+				BBE49C11333AACF94B6B04A5 /* PointCloudFrame.swift in Sources */,
+				5E1234A5AC3A6621ECB10352 /* PointCloudStore.swift in Sources */,
+				D926D738D38EFD1368D3C8FA /* ARPointCloudSession.swift in Sources */,
+				8BBF5964A6F7FC3B3544A312 /* ProScanCoordinator.swift in Sources */,
+				12E1DE3D98AAD735D94AF1B0 /* ProScanCaptureView.swift in Sources */,
+				515FCB68AA50891A8C391BAE /* RingBuffer.swift in Sources */,
+				2510A9370F2D59B9389A1D11 /* PointCloudTypes.swift in Sources */,
+				F95292B85DB1EBD8D631BE08 /* Shaders.metal in Sources */,
+				FCBA6D52E692740943D7B39C /* MetalPointCloudRenderer.swift in Sources */,
+				90DDF45D836CB1263FC06074 /* PointCloudMetalView.swift in Sources */,
+				60385EE02E3D3CE456560DD2 /* HapticEngineManager.swift in Sources */,
+				0239007327DED7E1B1D3B0C1 /* HapticPatterns.swift in Sources */,
+				BF3721E2E323E0C880F830CA /* HapticFeedbackAdapter.swift in Sources */,
+				05FD37E466497131F9199E05 /* PointCloudExportModels.swift in Sources */,
+				7525D348155F33A64F764CD6 /* PLYExporter.swift in Sources */,
+				A304C588B95C7A84BAEA75EC /* LASExporter.swift in Sources */,
+				0A68BD55DDC1FC539D55C494 /* PointCloudExportCoordinator.swift in Sources */,
+				7C4ECC55A08446B1DB268DEA /* PointCloudLocationProvider.swift in Sources */,
+				8891B15C7C957770436A1DFB /* HUDStyle.swift in Sources */,
+				7506E1C3CF6763A6CC60AE0E /* MetricsHUD.swift in Sources */,
+				D719A6388F144EC685C18D0E /* RadialToolMenu.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -323,7 +464,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = WREX368LLS;
+				DEVELOPMENT_TEAM = X4AZJ3DWHB;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Structura/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -464,7 +605,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = WREX368LLS;
+				DEVELOPMENT_TEAM = X4AZJ3DWHB;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Structura/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

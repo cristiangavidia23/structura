@@ -33,6 +33,29 @@ final class ScanStore: ObservableObject {
         return try? JSONDecoder().decode(CapturedStructure.self, from: data)
     }
 
+    func plyURL(for record: ScanRecord) -> URL? {
+        guard let name = record.plyFileName else { return nil }
+        return scansDirectory.appendingPathComponent(name)
+    }
+
+    func lasURL(for record: ScanRecord) -> URL? {
+        guard let name = record.lasFileName else { return nil }
+        return scansDirectory.appendingPathComponent(name)
+    }
+
+    /// Records a Pro Scan point-cloud export against an existing scan.
+    /// Additive: never touches the USDZ/room artifacts `save` already wrote.
+    func attachPointCloud(plyURL: URL?, lasURL: URL?, location: (lat: Double, lon: Double)?, to record: ScanRecord) {
+        guard let index = scans.firstIndex(where: { $0.id == record.id }) else { return }
+        if let plyURL { scans[index].plyFileName = plyURL.lastPathComponent }
+        if let lasURL { scans[index].lasFileName = lasURL.lastPathComponent }
+        if let location {
+            scans[index].pointCloudLatitude = location.lat
+            scans[index].pointCloudLongitude = location.lon
+        }
+        persist()
+    }
+
     func rename(_ record: ScanRecord, to newName: String) {
         let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let index = scans.firstIndex(where: { $0.id == record.id }) else { return }
@@ -46,6 +69,12 @@ final class ScanStore: ObservableObject {
         try? FileManager.default.removeItem(at: scansDirectory.appendingPathComponent(record.roomFileName))
         if let thumbnailURL = thumbnailURL(for: record) {
             try? FileManager.default.removeItem(at: thumbnailURL)
+        }
+        if let plyURL = plyURL(for: record) {
+            try? FileManager.default.removeItem(at: plyURL)
+        }
+        if let lasURL = lasURL(for: record) {
+            try? FileManager.default.removeItem(at: lasURL)
         }
         persist()
     }

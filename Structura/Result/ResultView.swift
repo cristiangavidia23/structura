@@ -13,6 +13,7 @@ struct ResultView: View {
     @State private var isPresentingPaywall = false
     @State private var isRenaming = false
     @State private var renameText = ""
+    @State private var isPresentingProScan = false
 
     private enum Mode: String, CaseIterable {
         case dollhouse = "3D"
@@ -117,6 +118,9 @@ struct ResultView: View {
         .sheet(isPresented: $isPresentingPaywall) {
             PaywallView(backgroundPlan: plan)
         }
+        .fullScreenCover(isPresented: $isPresentingProScan) {
+            ProScanCaptureView(record: currentScan, store: store) {}
+        }
         .alert("Renombrar escaneo", isPresented: $isRenaming) {
             TextField("Nombre", text: $renameText)
             Button("Cancelar", role: .cancel) {}
@@ -142,6 +146,31 @@ struct ResultView: View {
                 exportOrPaywall { share(CSVExporter.export(scan: currentScan, plan: plan)) }
             } label: {
                 Label("Medidas (CSV)", systemImage: "tablecells")
+            }
+
+            if let plyURL = store.plyURL(for: currentScan) {
+                Button {
+                    exportOrPaywall { share(plyURL) }
+                } label: {
+                    Label("Nube de puntos (PLY)", systemImage: "aqi.medium")
+                }
+            }
+            if let lasURL = store.lasURL(for: currentScan) {
+                Button {
+                    exportOrPaywall { share(lasURL) }
+                } label: {
+                    Label("Nube de puntos (LAS)", systemImage: "aqi.medium")
+                }
+            }
+            if ProScanCoordinator.isSupported {
+                Button {
+                    exportOrPaywall { isPresentingProScan = true }
+                } label: {
+                    Label(
+                        store.plyURL(for: currentScan) == nil ? "Mejorar con Pro Scan" : "Repetir Pro Scan",
+                        systemImage: "wand.and.stars"
+                    )
+                }
             }
         } label: {
             Image(systemName: "square.and.arrow.up")
