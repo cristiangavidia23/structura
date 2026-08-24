@@ -45,8 +45,19 @@ struct CaptureView: View {
                     } else if !isPresentingRoomChoice {
                         overlay
                     }
+
+                    if isPresentingRoomChoice {
+                        Color.black.opacity(0.35)
+                            .ignoresSafeArea()
+                            .transition(.opacity)
+
+                        roomChoiceCard
+                            .frame(maxHeight: .infinity, alignment: .bottom)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
                 }
                 .animation(.easeInOut(duration: 0.25), value: coordinator.instructionText)
+                .animation(HUDStyle.popSpring, value: isPresentingRoomChoice)
                 .onAppear {
                     coordinator.onRoomFinished = { room in
                         capturedRooms.append(room)
@@ -66,12 +77,6 @@ struct CaptureView: View {
                     Button("Cerrar", role: .cancel) { dismiss() }
                 } message: {
                     Text(buildErrorMessage ?? "")
-                }
-                .sheet(isPresented: $isPresentingRoomChoice) {
-                    roomChoiceSheet
-                        .presentationDetents([.height(220)])
-                        .presentationDragIndicator(.visible)
-                        .interactiveDismissDisabled()
                 }
             } else {
                 unsupportedDevice
@@ -162,8 +167,13 @@ struct CaptureView: View {
         .padding(.bottom, 40)
     }
 
-    private var roomChoiceSheet: some View {
+    private var roomChoiceCard: some View {
         VStack(spacing: 16) {
+            Capsule()
+                .fill(Theme.ink.opacity(0.2))
+                .frame(width: 36, height: 5)
+                .padding(.top, 10)
+
             VStack(spacing: 4) {
                 Text(capturedRooms.count == 1 ? "Ambiente escaneado" : "\(capturedRooms.count) ambientes escaneados")
                     .font(.headline)
@@ -173,7 +183,6 @@ struct CaptureView: View {
                     .foregroundStyle(Theme.ink.opacity(0.6))
                     .multilineTextAlignment(.center)
             }
-            .padding(.top, 8)
 
             Button {
                 isPresentingRoomChoice = false
@@ -192,8 +201,12 @@ struct CaptureView: View {
                     .foregroundStyle(Theme.ink)
             }
         }
-        .padding(20)
-        .background(Theme.paper)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 24)
+        .background(Theme.paper, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .padding(.horizontal, 12)
+        .padding(.bottom, 12)
+        .shadow(color: .black.opacity(0.25), radius: 20, y: 8)
     }
 
     /// StructureBuilder needs at least one room; it's what turns "just scan"
