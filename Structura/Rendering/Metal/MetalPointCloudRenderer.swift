@@ -119,7 +119,7 @@ private extension simd_float4x4 {
         self.init(
             SIMD4(xScale, 0, 0, 0),
             SIMD4(0, yScale, 0, 0),
-            SIMD4(0, 0, far / zRange, 1),
+            SIMD4(0, 0, far / zRange, -1),
             SIMD4(0, 0, -far * near / zRange, 0)
         )
     }

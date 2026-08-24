@@ -15,7 +15,10 @@ struct RadialToolMenu: View {
     @State private var isOpen = false
 
     private let radius: CGFloat = 92
-    private let arc: Double = 100
+    // Fans from straight up to straight left, since the fab sits in the
+    // bottom-trailing corner — anything spreading further right would run
+    // off the edge of the screen.
+    private let arc: Double = 90
 
     var body: some View {
         ZStack {
@@ -32,9 +35,10 @@ struct RadialToolMenu: View {
     }
 
     private func offset(for index: Int) -> CGSize {
-        guard items.count > 1 else { return CGSize(width: -radius, height: 0) }
+        guard items.count > 1 else { return CGSize(width: 0, height: -radius) }
         let step = arc / Double(items.count - 1)
-        let angle = Angle(degrees: -90 - arc / 2 + step * Double(index))
+        // 0° = straight up, sweeping toward straight left as index grows.
+        let angle = Angle(degrees: -90 - step * Double(index))
         return CGSize(width: radius * cos(angle.radians), height: radius * sin(angle.radians))
     }
 
