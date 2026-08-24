@@ -19,6 +19,7 @@ final class ProScanCoordinator: ObservableObject {
     let metalRenderer: MetalPointCloudRenderer?
 
     private let arSession = ARPointCloudSession()
+    var session: ARSession { arSession.session }
     private let hapticEngine = HapticEngineManager()
     private(set) lazy var haptics = HapticFeedbackAdapter(engineManager: hapticEngine)
 

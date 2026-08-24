@@ -7,7 +7,7 @@ import UIKit
 /// active session per process. Captures dense scene-depth points with
 /// per-point confidence for the Metal heatmap and point-cloud export.
 final class ARPointCloudSession: NSObject {
-    private let session = ARSession()
+    let session = ARSession()
     private let processingQueue = DispatchQueue(label: "com.structura.arpointcloud.processing", qos: .userInitiated)
 
     /// Every pixel would be far more data than needed for a live heatmap or

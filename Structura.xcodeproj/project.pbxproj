@@ -14,6 +14,7 @@
 		0A68BD55DDC1FC539D55C494 /* PointCloudExportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 002C3DC9CCDE497EF3463E26 /* PointCloudExportCoordinator.swift */; };
 		107B7208591424E8291D3979 /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBAF40F0AD07E417D2B06870 /* PurchaseManager.swift */; };
 		12E1DE3D98AAD735D94AF1B0 /* ProScanCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8175C70C7652CD6AB090211 /* ProScanCaptureView.swift */; };
+		1A98ADE85A2599693C03278F /* ARCameraPassthroughView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB261992BD48F7499924C833 /* ARCameraPassthroughView.swift */; };
 		2510A9370F2D59B9389A1D11 /* PointCloudTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 540CA5941A41374498883C58 /* PointCloudTypes.swift */; };
 		3B64A9FBA94EC287070C23CF /* CornerBrackets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A54ECCBFE7B5F5AEE59C49EF /* CornerBrackets.swift */; };
 		3F1398B8AEF92E7B2EE13FA5 /* PDFExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67C5CD0BC15A87A0AB74E5BD /* PDFExporter.swift */; };
@@ -105,6 +106,7 @@
 		C79A086D79FB5EB1DF172C7F /* RadialToolMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RadialToolMenu.swift; sourceTree = "<group>"; };
 		D50F9A73E22436BCB1E36225 /* MetricsHUD.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetricsHUD.swift; sourceTree = "<group>"; };
 		D7ACE7847F9A758B78A183FD /* FloorPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorPlanView.swift; sourceTree = "<group>"; };
+		DB261992BD48F7499924C833 /* ARCameraPassthroughView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ARCameraPassthroughView.swift; sourceTree = "<group>"; };
 		DC5C3EDCC135E4F56CC74631 /* PointCloudLocationProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PointCloudLocationProvider.swift; sourceTree = "<group>"; };
 		E78D94B24D2AB18DA74DD4D3 /* RoomCaptureRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomCaptureRepresentable.swift; sourceTree = "<group>"; };
 		E9AE11DBB56EE92B5291A229 /* SketchBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchBackdrop.swift; sourceTree = "<group>"; };
@@ -267,6 +269,7 @@
 				0A010EFEB6C9EDAEE8860A62 /* ARPointCloudSession.swift */,
 				BF4C8D5040A057C0EB5825F1 /* ProScanCoordinator.swift */,
 				B8175C70C7652CD6AB090211 /* ProScanCaptureView.swift */,
+				DB261992BD48F7499924C833 /* ARCameraPassthroughView.swift */,
 			);
 			name = Capture3D;
 			path = Capture3D;
@@ -451,6 +454,7 @@
 				8891B15C7C957770436A1DFB /* HUDStyle.swift in Sources */,
 				7506E1C3CF6763A6CC60AE0E /* MetricsHUD.swift in Sources */,
 				D719A6388F144EC685C18D0E /* RadialToolMenu.swift in Sources */,
+				1A98ADE85A2599693C03278F /* ARCameraPassthroughView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

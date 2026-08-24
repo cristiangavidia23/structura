@@ -24,6 +24,9 @@ struct ProScanCaptureView: View {
                 ZStack(alignment: .bottom) {
                     Color.black.ignoresSafeArea()
 
+                    ARCameraPassthroughView(session: proScan.session)
+                        .ignoresSafeArea()
+
                     if proScan.isHeatmapVisible, let renderer = proScan.metalRenderer {
                         PointCloudMetalView(renderer: renderer)
                             .ignoresSafeArea()
