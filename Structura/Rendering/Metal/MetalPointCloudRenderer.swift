@@ -29,11 +29,19 @@ final class MetalPointCloudRenderer: NSObject, MTKViewDelegate {
         buildPipeline()
     }
 
+    /// Never fatal: if the shader library or pipeline fails to build for any
+    /// reason, Pro Scan should keep capturing and exporting points — it
+    /// just won't have a live heatmap overlay. Crashing the whole capture
+    /// flow over a rendering nicety is a worse failure mode than a blank
+    /// preview.
     private func buildPipeline() {
-        guard let library = device.makeDefaultLibrary(),
-              let vertexFunction = library.makeFunction(name: "pointCloudVertex"),
+        guard let library = device.makeDefaultLibrary() ?? (try? device.makeDefaultLibrary(bundle: .main)) else {
+            print("Structura: Metal default library not found — point cloud heatmap disabled")
+            return
+        }
+        guard let vertexFunction = library.makeFunction(name: "pointCloudVertex"),
               let fragmentFunction = library.makeFunction(name: "pointCloudFragment") else {
-            assertionFailure("Structura: failed to load Shaders.metal functions for the point cloud pipeline")
+            print("Structura: pointCloudVertex/pointCloudFragment not found in Shaders.metal — point cloud heatmap disabled")
             return
         }
 
@@ -45,7 +53,7 @@ final class MetalPointCloudRenderer: NSObject, MTKViewDelegate {
         do {
             pipelineState = try device.makeRenderPipelineState(descriptor: descriptor)
         } catch {
-            assertionFailure("Structura: point cloud pipeline state creation failed: \(error)")
+            print("Structura: point cloud pipeline state creation failed: \(error) — heatmap disabled")
         }
     }
 
