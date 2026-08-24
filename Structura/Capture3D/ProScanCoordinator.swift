@@ -1,6 +1,7 @@
 import ARKit
 import Combine
 import UIKit
+import Metal
 
 /// Orchestrates the Pro Scan second pass: the raw ARKit session, its
 /// derived point cloud store, performance metrics, the Metal ring buffer,
@@ -15,6 +16,7 @@ final class ProScanCoordinator: ObservableObject {
     let performanceMonitor = PerformanceMonitor()
     let pointCloudStore = PointCloudStore()
     let ringBuffer = PointCloudRingBuffer()
+    let metalRenderer: MetalPointCloudRenderer?
 
     private let arSession = ARPointCloudSession()
     private let hapticEngine = HapticEngineManager()
@@ -25,6 +27,12 @@ final class ProScanCoordinator: ObservableObject {
     static var isSupported: Bool { ARPointCloudSession.isSupported }
 
     init() {
+        if let device = MTLCreateSystemDefaultDevice() {
+            metalRenderer = MetalPointCloudRenderer(device: device, ringBuffer: ringBuffer)
+        } else {
+            metalRenderer = nil
+        }
+
         arSession.onFrame = { [weak self] frame in
             guard let self else { return }
             self.ringBuffer.write(frame)

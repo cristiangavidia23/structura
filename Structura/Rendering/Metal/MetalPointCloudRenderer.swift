@@ -1,6 +1,16 @@
 import MetalKit
 import simd
 
+/// On-screen-inspectable snapshot of the render pipeline's health, since a
+/// silent black view otherwise gives no way to tell "no points yet" apart
+/// from "pipeline never built" apart from "drawing but off-screen" without
+/// attaching a debugger.
+struct MetalRenderDiagnostics {
+    var pipelineReady = false
+    var lastFrameVertexCount = 0
+    var drawCallCount = 0
+}
+
 /// Renders the latest point cloud frame from the ring buffer as a
 /// confidence-colored heatmap. Reads the buffer's latest completed slot on
 /// every `draw(in:)` without blocking the ARKit capture thread that writes
@@ -12,13 +22,28 @@ import simd
 /// instead of occasionally landing off-screen or behind a wandering
 /// synthetic viewpoint.
 final class MetalPointCloudRenderer: NSObject, MTKViewDelegate {
-    private let device: MTLDevice
+    let device: MTLDevice
     private let commandQueue: MTLCommandQueue
     private var pipelineState: MTLRenderPipelineState?
     private let ringBuffer: PointCloudRingBuffer
 
     private var vertexBuffer: MTLBuffer?
     private var vertexCount = 0
+
+    private let diagnosticsLock = NSLock()
+    private var _diagnostics = MetalRenderDiagnostics()
+
+    var diagnostics: MetalRenderDiagnostics {
+        diagnosticsLock.lock()
+        defer { diagnosticsLock.unlock() }
+        return _diagnostics
+    }
+
+    private func updateDiagnostics(_ mutate: (inout MetalRenderDiagnostics) -> Void) {
+        diagnosticsLock.lock()
+        mutate(&_diagnostics)
+        diagnosticsLock.unlock()
+    }
 
     init?(device: MTLDevice, ringBuffer: PointCloudRingBuffer) {
         guard let queue = device.makeCommandQueue() else { return nil }
@@ -52,6 +77,7 @@ final class MetalPointCloudRenderer: NSObject, MTKViewDelegate {
 
         do {
             pipelineState = try device.makeRenderPipelineState(descriptor: descriptor)
+            updateDiagnostics { $0.pipelineReady = true }
         } catch {
             print("Structura: point cloud pipeline state creation failed: \(error) — heatmap disabled")
         }
@@ -80,6 +106,10 @@ final class MetalPointCloudRenderer: NSObject, MTKViewDelegate {
 
     func draw(in view: MTKView) {
         let frame = uploadLatestFrame()
+        updateDiagnostics {
+            $0.lastFrameVertexCount = vertexCount
+            $0.drawCallCount += 1
+        }
 
         guard let pipelineState,
               let vertexBuffer,

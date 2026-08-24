@@ -15,6 +15,8 @@ struct ProScanCaptureView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isExporting = false
     @State private var exportError: String?
+    @State private var diagnostics = MetalRenderDiagnostics()
+    private let diagnosticsTimer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
 
     var body: some View {
         Group {
@@ -22,8 +24,8 @@ struct ProScanCaptureView: View {
                 ZStack(alignment: .bottom) {
                     Color.black.ignoresSafeArea()
 
-                    if proScan.isHeatmapVisible {
-                        PointCloudMetalView(ringBuffer: proScan.ringBuffer)
+                    if proScan.isHeatmapVisible, let renderer = proScan.metalRenderer {
+                        PointCloudMetalView(renderer: renderer)
                             .ignoresSafeArea()
                     }
 
@@ -31,9 +33,12 @@ struct ProScanCaptureView: View {
                         .frame(maxHeight: .infinity, alignment: .top)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                    MetricsHUD(monitor: proScan.performanceMonitor)
-                        .frame(maxHeight: .infinity, alignment: .top)
-                        .padding(.top, 16)
+                    VStack(spacing: 8) {
+                        MetricsHUD(monitor: proScan.performanceMonitor)
+                        diagnosticsBadge
+                    }
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .padding(.top, 16)
 
                     RadialToolMenu(items: [
                         RadialToolItem(systemImage: "aqi.medium", isActive: proScan.isHeatmapVisible) {
@@ -67,6 +72,9 @@ struct ProScanCaptureView: View {
                     )
                 }
                 .onDisappear { proScan.stop() }
+                .onReceive(diagnosticsTimer) { _ in
+                    diagnostics = proScan.metalRenderer?.diagnostics ?? MetalRenderDiagnostics()
+                }
                 .alert("No se pudo exportar", isPresented: errorPresented) {
                     Button("Cerrar", role: .cancel) { exportError = nil }
                 } message: {
@@ -81,6 +89,27 @@ struct ProScanCaptureView: View {
                 unsupportedDevice
             }
         }
+    }
+
+    /// On-screen readout of the Metal render path's health — whether the
+    /// shader pipeline actually built, and how many points are reaching the
+    /// GPU per draw call. Lets a blank preview be diagnosed from the phone
+    /// itself instead of needing a debugger attached.
+    private var diagnosticsBadge: some View {
+        Text(diagnosticsText)
+            .font(.caption2.monospacedDigit())
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(.black.opacity(0.6), in: Capsule())
+    }
+
+    private var diagnosticsText: String {
+        guard proScan.metalRenderer != nil else {
+            return "Metal: dispositivo no disponible"
+        }
+        let pipeline = diagnostics.pipelineReady ? "pipeline OK" : "pipeline NO cargó"
+        return "\(pipeline) · \(diagnostics.lastFrameVertexCount) pts/frame · \(diagnostics.drawCallCount) draws"
     }
 
     private var errorPresented: Binding<Bool> {
