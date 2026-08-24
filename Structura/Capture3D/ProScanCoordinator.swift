@@ -10,6 +10,7 @@ import UIKit
 final class ProScanCoordinator: ObservableObject {
     @Published private(set) var isRunning = false
     @Published var isHeatmapVisible = true
+    @Published var failureMessage: String?
 
     let performanceMonitor = PerformanceMonitor()
     let pointCloudStore = PointCloudStore()
@@ -36,6 +37,11 @@ final class ProScanCoordinator: ObservableObject {
         arSession.onTrackingState = { [weak self] state in
             Task { @MainActor in
                 self?.handleTrackingState(state)
+            }
+        }
+        arSession.onFailure = { [weak self] message in
+            Task { @MainActor in
+                self?.failureMessage = message
             }
         }
     }

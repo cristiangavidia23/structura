@@ -22,6 +22,7 @@ final class ARPointCloudSession: NSObject {
 
     var onFrame: ((PointCloudFrame) -> Void)?
     var onTrackingState: ((ARCamera.TrackingState) -> Void)?
+    var onFailure: ((String) -> Void)?
 
     static var isSupported: Bool {
         ARWorldTrackingConfiguration.supportsSceneReconstruction(.meshWithClassification)
@@ -36,13 +37,24 @@ final class ARPointCloudSession: NSObject {
     func start(viewportSize: CGSize, interfaceOrientation: UIInterfaceOrientation) {
         self.viewportSize = viewportSize
         self.interfaceOrientation = interfaceOrientation
-        guard Self.isSupported else { return }
-        let configuration = ARWorldTrackingConfiguration()
-        configuration.sceneReconstruction = .meshWithClassification
-        if ARWorldTrackingConfiguration.supportsFrameSemantics(.sceneDepth) {
-            configuration.frameSemantics.insert(.sceneDepth)
+        guard Self.isSupported else {
+            onFailure?("Este dispositivo no soporta Pro Scan.")
+            return
         }
-        session.run(configuration)
+
+        // RoomPlan's own ARSession may still be releasing the camera at the
+        // exact moment this second pass starts (its `stop()` call is not
+        // guaranteed to have finished tearing down hardware synchronously).
+        // A short grace period avoids racing that teardown.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            guard let self else { return }
+            let configuration = ARWorldTrackingConfiguration()
+            configuration.sceneReconstruction = .meshWithClassification
+            if ARWorldTrackingConfiguration.supportsFrameSemantics(.sceneDepth) {
+                configuration.frameSemantics.insert(.sceneDepth)
+            }
+            self.session.run(configuration)
+        }
     }
 
     func stop() {
@@ -75,11 +87,18 @@ final class ARPointCloudSession: NSObject {
         let depthBytesPerRow = CVPixelBufferGetBytesPerRow(depthMap)
         let depthBuffer = depthBase.assumingMemoryBound(to: Float32.self)
 
+        // Guard defensively rather than trust that the confidence map always
+        // matches the depth map's dimensions: an out-of-bounds read here
+        // would be undefined behavior, not a recoverable Swift error.
         var confidenceBuffer: UnsafePointer<UInt8>?
         var confidenceBytesPerRow = 0
+        var confidenceWidth = 0
+        var confidenceHeight = 0
         if let confidenceMap, let base = CVPixelBufferGetBaseAddress(confidenceMap) {
             confidenceBuffer = UnsafePointer(base.assumingMemoryBound(to: UInt8.self))
             confidenceBytesPerRow = CVPixelBufferGetBytesPerRow(confidenceMap)
+            confidenceWidth = CVPixelBufferGetWidth(confidenceMap)
+            confidenceHeight = CVPixelBufferGetHeight(confidenceMap)
         }
 
         let intrinsics = frame.camera.intrinsics
@@ -95,13 +114,19 @@ final class ARPointCloudSession: NSObject {
         var y = 0
         while y < height {
             let depthRow = depthBuffer.advanced(by: (y * depthBytesPerRow) / MemoryLayout<Float32>.size)
-            let confidenceRow = confidenceBuffer.map { $0 + y * confidenceBytesPerRow }
+            let confidenceRowInBounds = confidenceBuffer != nil && y < confidenceHeight
+            let confidenceRow = confidenceRowInBounds ? confidenceBuffer.map { $0 + y * confidenceBytesPerRow } : nil
             var x = 0
             while x < width {
                 let depth = depthRow[x]
                 guard depth.isFinite, depth > 0 else { x += pixelStride; continue }
 
-                let confidenceRaw = confidenceRow.map { Float($0[x]) } ?? Float(ARConfidenceLevel.high.rawValue)
+                let confidenceRaw: Float
+                if let confidenceRow, x < confidenceWidth {
+                    confidenceRaw = Float(confidenceRow[x])
+                } else {
+                    confidenceRaw = Float(ARConfidenceLevel.high.rawValue)
+                }
                 let confidence = confidenceRaw / Float(ARConfidenceLevel.high.rawValue)
 
                 // Unproject the pixel via the camera's pinhole model, then
@@ -145,7 +170,16 @@ extension ARPointCloudSession: ARSessionDelegate {
     }
 
     func session(_ session: ARSession, didFailWithError error: Error) {
-        // Best-effort second pass: surface nothing disruptive, tracking
-        // state simply stops updating and the HUD reflects that.
+        onFailure?(error.localizedDescription)
+    }
+
+    func sessionWasInterrupted(_ session: ARSession) {
+        onFailure?("La sesión de captura se interrumpió (llamada entrante, otra app, etc.).")
+    }
+
+    func sessionInterruptionEnded(_ session: ARSession) {
+        // ARKit resets tracking after an interruption; simplest recovery is
+        // to just keep receiving frames — accumulated points before the
+        // interruption are already in `PointCloudStore`.
     }
 }

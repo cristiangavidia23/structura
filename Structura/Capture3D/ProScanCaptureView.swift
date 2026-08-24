@@ -72,6 +72,11 @@ struct ProScanCaptureView: View {
                 } message: {
                     Text(exportError ?? "")
                 }
+                .alert("Pro Scan se interrumpió", isPresented: failurePresented) {
+                    Button("Cerrar", role: .cancel) { proScan.failureMessage = nil }
+                } message: {
+                    Text(proScan.failureMessage ?? "")
+                }
             } else {
                 unsupportedDevice
             }
@@ -80,6 +85,10 @@ struct ProScanCaptureView: View {
 
     private var errorPresented: Binding<Bool> {
         Binding(get: { exportError != nil }, set: { if !$0 { exportError = nil } })
+    }
+
+    private var failurePresented: Binding<Bool> {
+        Binding(get: { proScan.failureMessage != nil }, set: { if !$0 { proScan.failureMessage = nil } })
     }
 
     private var cancelButton: some View {
