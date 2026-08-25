@@ -28,11 +28,17 @@ struct PointCloudSceneView: UIViewRepresentable {
 }
 
 private enum SceneBuilder {
+    /// Very-low-confidence samples are real data (kept in the export), but
+    /// visually they're mostly noise that drowns out the readable parts of
+    /// the scan in a wash of red — thin them out for viewing.
+    private static let minimumDisplayConfidence: Float = 0.2
+
     static func build(from points: [PointCloudExportPoint]) -> SCNScene {
         let scene = SCNScene()
-        guard !points.isEmpty else { return scene }
+        let visiblePoints = points.filter { $0.confidence >= minimumDisplayConfidence }
+        guard !visiblePoints.isEmpty else { return scene }
 
-        let node = SCNNode(geometry: pointCloudGeometry(for: points))
+        let node = SCNNode(geometry: pointCloudGeometry(for: visiblePoints))
         scene.rootNode.addChildNode(node)
         scene.rootNode.addChildNode(cameraNode(framing: node))
         return scene

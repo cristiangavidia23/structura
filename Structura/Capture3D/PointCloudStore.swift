@@ -10,29 +10,56 @@ final class PointCloudStore: ObservableObject {
     @Published private(set) var pointCount: Int = 0
     @Published private(set) var lastUpdate: Date?
 
-    /// Full-resolution accumulated points, kept for export once the Pro
-    /// Scan pass finishes. Not published — read directly by the export
+    /// Deduplicated accumulated points, kept for export once the Pro Scan
+    /// pass finishes. Not published — read directly by the export
     /// coordinator when the user requests a file.
     private(set) var accumulatedPositions: [SIMD3<Float>] = []
     private(set) var accumulatedConfidences: [Float] = []
 
-    private let downsampleStride = 4 // keep memory bounded across a long pass
+    /// The same wall gets swept by the depth camera dozens of times as the
+    /// user pans around it; without deduplication, those near-duplicate
+    /// samples pile up into a smeared, noisy blob instead of a clean
+    /// surface. Each frame's points are snapped onto a coarse 3D grid, and
+    /// only the highest-confidence sample per cell is kept.
+    private let voxelSizeMeters: Float = 0.02
+    private var voxelIndex: [Int64: Int] = [:]
 
     func reset() {
         pointCount = 0
         lastUpdate = nil
         accumulatedPositions.removeAll(keepingCapacity: false)
         accumulatedConfidences.removeAll(keepingCapacity: false)
+        voxelIndex.removeAll(keepingCapacity: false)
     }
 
     func ingest(_ frame: PointCloudFrame) {
-        var index = 0
-        while index < frame.positions.count {
-            accumulatedPositions.append(frame.positions[index])
-            accumulatedConfidences.append(frame.confidences[index])
-            index += downsampleStride
+        for i in 0..<frame.positions.count {
+            let position = frame.positions[i]
+            let confidence = frame.confidences[i]
+            let key = voxelKey(for: position)
+
+            if let existingIndex = voxelIndex[key] {
+                if confidence > accumulatedConfidences[existingIndex] {
+                    accumulatedPositions[existingIndex] = position
+                    accumulatedConfidences[existingIndex] = confidence
+                }
+            } else {
+                voxelIndex[key] = accumulatedPositions.count
+                accumulatedPositions.append(position)
+                accumulatedConfidences.append(confidence)
+            }
         }
         pointCount = accumulatedPositions.count
         lastUpdate = Date()
+    }
+
+    private func voxelKey(for position: SIMD3<Float>) -> Int64 {
+        // Packs three 20-bit signed cell coordinates into one Int64 —
+        // comfortably covers any room-scale scan (±5,000 cells ≈ ±100m at
+        // this voxel size) without allocating a struct key per point.
+        let x = Int64((position.x / voxelSizeMeters).rounded()) & 0x1FFFFF
+        let y = Int64((position.y / voxelSizeMeters).rounded()) & 0x1FFFFF
+        let z = Int64((position.z / voxelSizeMeters).rounded()) & 0x1FFFFF
+        return (x << 42) | (y << 21) | z
     }
 }
