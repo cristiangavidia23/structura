@@ -75,6 +75,18 @@ final class MetalPointCloudRenderer: NSObject, MTKViewDelegate {
         descriptor.fragmentFunction = fragmentFunction
         descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
 
+        // Soft dots need real alpha blending, not a straight overwrite —
+        // otherwise the feathered edge from the fragment shader just gets
+        // clipped back to a hard square by the opaque write.
+        let colorAttachment = descriptor.colorAttachments[0]!
+        colorAttachment.isBlendingEnabled = true
+        colorAttachment.rgbBlendOperation = .add
+        colorAttachment.alphaBlendOperation = .add
+        colorAttachment.sourceRGBBlendFactor = .sourceAlpha
+        colorAttachment.sourceAlphaBlendFactor = .sourceAlpha
+        colorAttachment.destinationRGBBlendFactor = .oneMinusSourceAlpha
+        colorAttachment.destinationAlphaBlendFactor = .oneMinusSourceAlpha
+
         do {
             pipelineState = try device.makeRenderPipelineState(descriptor: descriptor)
             updateDiagnostics { $0.pipelineReady = true }
@@ -122,7 +134,7 @@ final class MetalPointCloudRenderer: NSObject, MTKViewDelegate {
 
         var uniforms = PointCloudUniforms(
             viewProjectionMatrix: frame.projectionMatrix * frame.viewMatrix,
-            pointSize: 8
+            pointSize: 16
         )
 
         encoder.setRenderPipelineState(pipelineState)

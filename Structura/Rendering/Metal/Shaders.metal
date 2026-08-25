@@ -42,6 +42,20 @@ vertex PointVertexOut pointCloudVertex(
     return out;
 }
 
-fragment float4 pointCloudFragment(PointVertexOut in [[stage_in]]) {
-    return in.color;
+// Soft circular dot with a feathered edge and a brighter core, instead of a
+// hard-edged square — reads as a glow rather than a raw pixel grid.
+fragment float4 pointCloudFragment(
+    PointVertexOut in [[stage_in]],
+    float2 pointCoord [[point_coord]]
+) {
+    float2 centered = pointCoord - float2(0.5, 0.5);
+    float distance = length(centered) * 2.0; // 0 at center, 1 at the edge
+    if (distance > 1.0) {
+        discard_fragment();
+    }
+
+    float core = smoothstep(1.0, 0.0, distance);
+    float alpha = smoothstep(1.0, 0.55, distance);
+    float3 color = mix(in.color.rgb, min(in.color.rgb * 1.35 + 0.15, 1.0), core);
+    return float4(color, alpha * in.color.a);
 }

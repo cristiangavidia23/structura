@@ -12,7 +12,7 @@ final class ARPointCloudSession: NSObject {
 
     /// Every pixel would be far more data than needed for a live heatmap or
     /// a reasonably sized export; sample a coarse grid instead.
-    private let pixelStride = 8
+    private let pixelStride = 5
 
     /// Fixed at `start()` and reused per-frame from a background queue —
     /// reading `UIScreen`/orientation live on every frame would touch
