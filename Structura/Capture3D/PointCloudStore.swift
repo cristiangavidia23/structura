@@ -15,6 +15,7 @@ final class PointCloudStore: ObservableObject {
     /// coordinator when the user requests a file.
     private(set) var accumulatedPositions: [SIMD3<Float>] = []
     private(set) var accumulatedConfidences: [Float] = []
+    private(set) var accumulatedColors: [SIMD3<Float>] = []
 
     /// The same wall gets swept by the depth camera dozens of times as the
     /// user pans around it; without deduplication, those near-duplicate
@@ -29,6 +30,7 @@ final class PointCloudStore: ObservableObject {
         lastUpdate = nil
         accumulatedPositions.removeAll(keepingCapacity: false)
         accumulatedConfidences.removeAll(keepingCapacity: false)
+        accumulatedColors.removeAll(keepingCapacity: false)
         voxelIndex.removeAll(keepingCapacity: false)
     }
 
@@ -36,17 +38,20 @@ final class PointCloudStore: ObservableObject {
         for i in 0..<frame.positions.count {
             let position = frame.positions[i]
             let confidence = frame.confidences[i]
+            let color = frame.colors.indices.contains(i) ? frame.colors[i] : SIMD3<Float>(0.5, 0.5, 0.5)
             let key = voxelKey(for: position)
 
             if let existingIndex = voxelIndex[key] {
                 if confidence > accumulatedConfidences[existingIndex] {
                     accumulatedPositions[existingIndex] = position
                     accumulatedConfidences[existingIndex] = confidence
+                    accumulatedColors[existingIndex] = color
                 }
             } else {
                 voxelIndex[key] = accumulatedPositions.count
                 accumulatedPositions.append(position)
                 accumulatedConfidences.append(confidence)
+                accumulatedColors.append(color)
             }
         }
         pointCount = accumulatedPositions.count

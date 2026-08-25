@@ -1,9 +1,12 @@
 import SwiftUI
 import SceneKit
 
-/// Standalone, navigable 3D view of a Pro Scan point cloud, colored by
-/// confidence (the same red→green heatmap as the live capture). Lives in
-/// its own scene rather than fused into `DollhouseSceneView`'s room mesh:
+/// Standalone, navigable 3D view of a Pro Scan point cloud, colored with
+/// the real camera image sampled at capture time (not a confidence
+/// heatmap — that's still what the live Pro Scan overlay shows, since
+/// during capture the useful signal is scan quality, not appearance).
+/// Lives in its own scene rather than fused into `DollhouseSceneView`'s
+/// room mesh:
 /// Pro Scan runs in a separate ARKit session from RoomPlan's, so the two
 /// point sets don't share a coordinate space — overlaying them onto the
 /// same walls would be fabricated precision, not real alignment.
@@ -52,8 +55,7 @@ private enum SceneBuilder {
 
         for point in points {
             vertices.append(SCNVector3(point.position.x, point.position.y, point.position.z))
-            let color = heatmapColor(confidence: point.confidence)
-            colors.append(SCNVector4(color.0, color.1, color.2, 1))
+            colors.append(SCNVector4(point.color.x, point.color.y, point.color.z, 1))
         }
 
         let vertexSource = SCNGeometrySource(vertices: vertices)
@@ -87,19 +89,6 @@ private enum SceneBuilder {
         material.isDoubleSided = true
         geometry.materials = [material]
         return geometry
-    }
-
-    /// Mirrors the Metal shader's confidence gradient: red (low) through
-    /// yellow to green (high).
-    private static func heatmapColor(confidence: Float) -> (Float, Float, Float) {
-        let low: (Float, Float, Float) = (0.85, 0.18, 0.15)
-        let mid: (Float, Float, Float) = (0.95, 0.75, 0.15)
-        let high: (Float, Float, Float) = (0.20, 0.80, 0.30)
-        let c = min(max(confidence, 0), 1)
-        func mix(_ a: (Float, Float, Float), _ b: (Float, Float, Float), _ t: Float) -> (Float, Float, Float) {
-            (a.0 + (b.0 - a.0) * t, a.1 + (b.1 - a.1) * t, a.2 + (b.2 - a.2) * t)
-        }
-        return c < 0.5 ? mix(low, mid, c * 2) : mix(mid, high, (c - 0.5) * 2)
     }
 
     /// A straight-on start angle flattens a mostly-planar scan (a wall swept

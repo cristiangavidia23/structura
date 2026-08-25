@@ -155,8 +155,14 @@ struct ProScanCaptureView: View {
         proScan.stop()
         isExporting = true
 
-        let exportPoints = zip(proScan.pointCloudStore.accumulatedPositions, proScan.pointCloudStore.accumulatedConfidences)
-            .map { PointCloudExportPoint(position: $0.0, confidence: $0.1) }
+        let pointCloudStore = proScan.pointCloudStore
+        let exportPoints = (0..<pointCloudStore.accumulatedPositions.count).map { i in
+            PointCloudExportPoint(
+                position: pointCloudStore.accumulatedPositions[i],
+                confidence: pointCloudStore.accumulatedConfidences[i],
+                color: pointCloudStore.accumulatedColors[i]
+            )
+        }
         let directory = store.scansDirectory
         let baseName = "\(record.id.uuidString)_pointcloud"
 

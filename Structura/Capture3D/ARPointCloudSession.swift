@@ -66,20 +66,36 @@ final class ARPointCloudSession: NSObject {
     /// Runs entirely on `processingQueue`; the source `ARFrame` is never
     /// retained past this call, per ARKit's buffer-recycling contract.
     private func processFrame(_ frame: ARFrame) {
-        guard let sceneDepth = frame.sceneDepth else { return }
+        // Temporally filtered depth is noticeably less noisy per-point than
+        // the raw current-frame depth — doesn't fix session-level tracking
+        // drift, but does reduce point-level jitter within a single pass.
+        guard let sceneDepth = frame.smoothedSceneDepth ?? frame.sceneDepth else { return }
         let depthMap = sceneDepth.depthMap
         let confidenceMap = sceneDepth.confidenceMap
+        let colorImage = frame.capturedImage
 
         CVPixelBufferLockBaseAddress(depthMap, .readOnly)
         if let confidenceMap {
             CVPixelBufferLockBaseAddress(confidenceMap, .readOnly)
         }
+        CVPixelBufferLockBaseAddress(colorImage, .readOnly)
         defer {
             CVPixelBufferUnlockBaseAddress(depthMap, .readOnly)
             if let confidenceMap {
                 CVPixelBufferUnlockBaseAddress(confidenceMap, .readOnly)
             }
+            CVPixelBufferUnlockBaseAddress(colorImage, .readOnly)
         }
+
+        // `capturedImage` is biplanar 4:2:0 YCbCr (full range): plane 0 is
+        // full-resolution luma, plane 1 is half-resolution interleaved
+        // Cb/Cr. Sampled per point below via `sampleColor`.
+        let lumaBase = CVPixelBufferGetBaseAddressOfPlane(colorImage, 0)
+        let lumaBytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(colorImage, 0)
+        let lumaWidth = CVPixelBufferGetWidthOfPlane(colorImage, 0)
+        let lumaHeight = CVPixelBufferGetHeightOfPlane(colorImage, 0)
+        let chromaBase = CVPixelBufferGetBaseAddressOfPlane(colorImage, 1)
+        let chromaBytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(colorImage, 1)
 
         let width = CVPixelBufferGetWidth(depthMap)
         let height = CVPixelBufferGetHeight(depthMap)
@@ -115,10 +131,17 @@ final class ARPointCloudSession: NSObject {
         let fx = intrinsics[0][0] * scaleX, fy = intrinsics[1][1] * scaleY
         let cx = intrinsics[2][0] * scaleX, cy = intrinsics[2][1] * scaleY
 
+        // Maps a depth-map pixel to its matching pixel in the full-resolution
+        // color image, to sample the real camera color for that point.
+        let colorScaleX = Float(lumaWidth) / Float(width)
+        let colorScaleY = Float(lumaHeight) / Float(height)
+
         var positions: [SIMD3<Float>] = []
         var confidences: [Float] = []
+        var colors: [SIMD3<Float>] = []
         positions.reserveCapacity((width / pixelStride) * (height / pixelStride))
         confidences.reserveCapacity(positions.capacity)
+        colors.reserveCapacity(positions.capacity)
 
         var y = 0
         while y < height {
@@ -145,8 +168,17 @@ final class ARPointCloudSession: NSObject {
                 let cameraPoint = SIMD4<Float>(px, py, -depth, 1)
                 let worldPoint = cameraTransform * cameraPoint
 
+                let colorX = min(max(Int(Float(x) * colorScaleX), 0), lumaWidth - 1)
+                let colorY = min(max(Int(Float(y) * colorScaleY), 0), lumaHeight - 1)
+                let color = Self.sampleColor(
+                    lumaBase: lumaBase, lumaBytesPerRow: lumaBytesPerRow,
+                    chromaBase: chromaBase, chromaBytesPerRow: chromaBytesPerRow,
+                    x: colorX, y: colorY
+                )
+
                 positions.append(SIMD3<Float>(worldPoint.x, worldPoint.y, worldPoint.z))
                 confidences.append(confidence)
+                colors.append(color)
 
                 x += pixelStride
             }
@@ -164,11 +196,46 @@ final class ARPointCloudSession: NSObject {
         let processed = PointCloudFrame(
             positions: positions,
             confidences: confidences,
+            colors: colors,
             timestamp: frame.timestamp,
             viewMatrix: viewMatrix,
             projectionMatrix: projectionMatrix
         )
         onFrame?(processed)
+    }
+
+    /// BT.601 full-range YCbCr → RGB, sampled at a single luma pixel (and
+    /// its corresponding half-resolution chroma pixel).
+    private static func sampleColor(
+        lumaBase: UnsafeMutableRawPointer?,
+        lumaBytesPerRow: Int,
+        chromaBase: UnsafeMutableRawPointer?,
+        chromaBytesPerRow: Int,
+        x: Int,
+        y: Int
+    ) -> SIMD3<Float> {
+        guard let lumaBase, let chromaBase else { return SIMD3<Float>(0.5, 0.5, 0.5) }
+
+        let luma = lumaBase.load(fromByteOffset: y * lumaBytesPerRow + x, as: UInt8.self)
+        let chromaX = (x / 2) * 2
+        let chromaY = y / 2
+        let chromaOffset = chromaY * chromaBytesPerRow + chromaX
+        let cb = chromaBase.load(fromByteOffset: chromaOffset, as: UInt8.self)
+        let cr = chromaBase.load(fromByteOffset: chromaOffset + 1, as: UInt8.self)
+
+        let yVal = Float(luma)
+        let cbVal = Float(cb) - 128
+        let crVal = Float(cr) - 128
+
+        let r = yVal + 1.402 * crVal
+        let g = yVal - 0.344136 * cbVal - 0.714136 * crVal
+        let b = yVal + 1.772 * cbVal
+
+        return SIMD3<Float>(
+            min(max(r / 255, 0), 1),
+            min(max(g / 255, 0), 1),
+            min(max(b / 255, 0), 1)
+        )
     }
 }
 

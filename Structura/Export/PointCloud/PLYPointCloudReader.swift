@@ -19,8 +19,14 @@ enum PLYPointCloudReader {
         }
         guard vertexCount > 0 else { return nil }
 
+        // Older exports (before color sampling was added) only have the
+        // four float properties — detect from the header rather than
+        // assuming, so those files still load instead of misreading past
+        // their actual vertex data.
+        let hasColor = header.contains("property uchar red")
+        let stride = MemoryLayout<Float>.size * 4 + (hasColor ? 3 : 0)
+
         let bodyStart = headerEndRange.upperBound
-        let stride = MemoryLayout<Float>.size * 4 // x, y, z, confidence
         guard data.count - bodyStart >= vertexCount * stride else { return nil }
 
         var points: [PointCloudExportPoint] = []
@@ -34,7 +40,18 @@ enum PLYPointCloudReader {
                 let y = base.loadUnaligned(fromByteOffset: offset + 4, as: Float.self)
                 let z = base.loadUnaligned(fromByteOffset: offset + 8, as: Float.self)
                 let confidence = base.loadUnaligned(fromByteOffset: offset + 12, as: Float.self)
-                points.append(PointCloudExportPoint(position: SIMD3(x, y, z), confidence: confidence))
+
+                let color: SIMD3<Float>
+                if hasColor {
+                    let r = base.loadUnaligned(fromByteOffset: offset + 16, as: UInt8.self)
+                    let g = base.loadUnaligned(fromByteOffset: offset + 17, as: UInt8.self)
+                    let b = base.loadUnaligned(fromByteOffset: offset + 18, as: UInt8.self)
+                    color = SIMD3(Float(r) / 255, Float(g) / 255, Float(b) / 255)
+                } else {
+                    color = SIMD3(0.5, 0.5, 0.5)
+                }
+
+                points.append(PointCloudExportPoint(position: SIMD3(x, y, z), confidence: confidence, color: color))
             }
         }
 

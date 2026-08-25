@@ -18,7 +18,7 @@ struct ResultView: View {
     private enum Mode: String, CaseIterable {
         case dollhouse = "3D"
         case plan = "Plano"
-        case heatmap = "Heatmap"
+        case heatmap = "Color real"
     }
 
     /// Heatmap only shows up once a Pro Scan pass actually produced a point
@@ -103,7 +103,7 @@ struct ResultView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .frame(width: availableModes.count > 2 ? 220 : 160)
+                .frame(width: availableModes.count > 2 ? 260 : 160)
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {

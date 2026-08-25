@@ -22,18 +22,24 @@ enum PLYExporter {
         property float y
         property float z
         property float confidence
+        property uchar red
+        property uchar green
+        property uchar blue
         end_header
 
         """
 
         var data = Data(header.utf8)
-        data.reserveCapacity(data.count + points.count * MemoryLayout<Float>.size * 4)
+        data.reserveCapacity(data.count + points.count * (MemoryLayout<Float>.size * 4 + 3))
 
         for point in points {
             withUnsafeBytes(of: point.position.x) { data.append(contentsOf: $0) }
             withUnsafeBytes(of: point.position.y) { data.append(contentsOf: $0) }
             withUnsafeBytes(of: point.position.z) { data.append(contentsOf: $0) }
             withUnsafeBytes(of: point.confidence) { data.append(contentsOf: $0) }
+            data.append(UInt8(min(max(point.color.x * 255, 0), 255)))
+            data.append(UInt8(min(max(point.color.y * 255, 0), 255)))
+            data.append(UInt8(min(max(point.color.z * 255, 0), 255)))
         }
 
         let url = directory.appendingPathComponent("\(baseName).ply")
