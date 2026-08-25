@@ -102,6 +102,11 @@ private enum SceneBuilder {
         return c < 0.5 ? mix(low, mid, c * 2) : mix(mid, high, (c - 0.5) * 2)
     }
 
+    /// A straight-on start angle flattens a mostly-planar scan (a wall swept
+    /// head-on) into what looks like a blob with no depth at all — you'd
+    /// have to already know to orbit it to discover the shape. Start from
+    /// the same elevated 3/4 angle `DollhouseSceneView` uses instead, so
+    /// depth reads immediately.
     private static func cameraNode(framing node: SCNNode) -> SCNNode {
         let camera = SCNCamera()
         camera.fieldOfView = 45
@@ -112,7 +117,13 @@ private enum SceneBuilder {
         let verticalFOVRadians = Float(camera.fieldOfView) * .pi / 180
         let distance = max(radius / sin(verticalFOVRadians / 2) * 1.3, 0.5)
 
-        cameraNode.position = SCNVector3(center.x, center.y, center.z + distance)
+        let azimuth: Float = .pi / 4
+        let elevation: Float = .pi / 4.6
+        cameraNode.position = SCNVector3(
+            center.x + distance * cos(elevation) * sin(azimuth),
+            center.y + distance * sin(elevation),
+            center.z + distance * cos(elevation) * cos(azimuth)
+        )
         cameraNode.look(at: center)
         return cameraNode
     }
