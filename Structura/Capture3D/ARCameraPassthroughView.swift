@@ -17,6 +17,13 @@ struct ARCameraPassthroughView: UIViewRepresentable {
         let view = ARView(frame: .zero)
         view.session = session
         view.automaticallyConfigureSession = false
+        // The debug option alone only visualizes scene understanding if the
+        // subsystem is actually consuming the mesh — it stays idle
+        // otherwise, no matter how many `ARMeshAnchor`s the session hands
+        // out. `.occlusion` is the option Apple's own samples enable for
+        // this; we don't render virtual content that needs occluding, so
+        // it has no other effect here.
+        view.environment.sceneUnderstanding.options.insert(.occlusion)
         view.debugOptions = isMeshVisible ? [.showSceneUnderstanding] : []
         return view
     }
