@@ -1,23 +1,27 @@
 import SwiftUI
 import ARKit
-import SceneKit
+import RealityKit
 
-/// Live camera background for the Pro Scan session, so the confidence
-/// heatmap draws over the actual room instead of floating on plain black.
-/// Shares the same `ARSession` that `ARPointCloudSession` already runs and
-/// is the delegate of — `ARSCNView` only reads frames to render the camera
-/// image, it doesn't take over or compete with that delegate.
+/// Live camera background for the Pro Scan session, with ARKit's own scene
+/// mesh drawn over it as it's reconstructed in real time — RealityKit's
+/// built-in scene-understanding visualization, filling in as the fused
+/// `ARMeshAnchor` geometry (what `ARPointCloudSession` also reads for
+/// export) grows. Shares the same `ARSession` that `ARPointCloudSession`
+/// already runs and is the delegate of — `ARView` only reads frames to
+/// render, it doesn't take over or compete with that delegate.
 struct ARCameraPassthroughView: UIViewRepresentable {
     let session: ARSession
+    var isMeshVisible: Bool
 
-    func makeUIView(context: Context) -> ARSCNView {
-        let view = ARSCNView()
+    func makeUIView(context: Context) -> ARView {
+        let view = ARView(frame: .zero)
         view.session = session
-        view.automaticallyUpdatesLighting = false
-        view.scene = SCNScene()
-        view.antialiasingMode = .none
+        view.automaticallyConfigureSession = false
+        view.debugOptions = isMeshVisible ? [.showSceneUnderstanding] : []
         return view
     }
 
-    func updateUIView(_ uiView: ARSCNView, context: Context) {}
+    func updateUIView(_ uiView: ARView, context: Context) {
+        uiView.debugOptions = isMeshVisible ? [.showSceneUnderstanding] : []
+    }
 }

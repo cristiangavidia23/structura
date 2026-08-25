@@ -17,13 +17,11 @@
 		12E1DE3D98AAD735D94AF1B0 /* ProScanCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8175C70C7652CD6AB090211 /* ProScanCaptureView.swift */; };
 		1A98ADE85A2599693C03278F /* ARCameraPassthroughView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB261992BD48F7499924C833 /* ARCameraPassthroughView.swift */; };
 		1BDB26C94BE0A719405108E7 /* PointCloudSceneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17B4C40FF82F29EE546CEBF6 /* PointCloudSceneView.swift */; };
-		2510A9370F2D59B9389A1D11 /* PointCloudTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 540CA5941A41374498883C58 /* PointCloudTypes.swift */; };
 		3B64A9FBA94EC287070C23CF /* CornerBrackets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A54ECCBFE7B5F5AEE59C49EF /* CornerBrackets.swift */; };
 		3F1398B8AEF92E7B2EE13FA5 /* PDFExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67C5CD0BC15A87A0AB74E5BD /* PDFExporter.swift */; };
 		4788EC9B50127DCD5BD71B88 /* DollhouseSceneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B9B861B85EFC434FDBFAFAC /* DollhouseSceneView.swift */; };
 		49B7CB83FFF47DE920E7F834 /* GraphPaperBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11138480935319AAE2C1B695 /* GraphPaperBackground.swift */; };
 		4D6F9E0DF437D1BCB2E91811 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = C2A3EEBCDBE2E8B8FE50ECCC /* RevenueCat */; };
-		515FCB68AA50891A8C391BAE /* RingBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200842F6CDDD045BE845A5E /* RingBuffer.swift */; };
 		540E4E05FC31D406F8BDC7A6 /* FloorPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7ACE7847F9A758B78A183FD /* FloorPlanView.swift */; };
 		568BD69819C863FE264B56B9 /* BlueprintBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B01C9230240DE02C68C495B /* BlueprintBackdrop.swift */; };
 		5B832F4D8AC146DCEF4A83A2 /* StructuraApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FE458FE3C3369BCAE73208A /* StructuraApp.swift */; };
@@ -39,7 +37,6 @@
 		8BBF5964A6F7FC3B3544A312 /* ProScanCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF4C8D5040A057C0EB5825F1 /* ProScanCoordinator.swift */; };
 		8C0D8D7D0EA6FD2C021B9BAC /* LegalLinks.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7729D532E4D0E3C98E539BC /* LegalLinks.swift */; };
 		8C8AB3517A1182CFA187900F /* MeasurementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06959A398729A01CD14F0E23 /* MeasurementsView.swift */; };
-		90DDF45D836CB1263FC06074 /* PointCloudMetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B62A548674A0CAA0D196D1 /* PointCloudMetalView.swift */; };
 		9A583751901FDC76CDD5CA2C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8DF852FB48CD3854642A5602 /* Assets.xcassets */; };
 		9D6E08814FE36A6948F9D9A8 /* FloorPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8539560292F05A011D44BB /* FloorPlan.swift */; };
 		A304C588B95C7A84BAEA75EC /* LASExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71D88304888213BF9C8A97A3 /* LASExporter.swift */; };
@@ -59,8 +56,6 @@
 		E8646A4C4193364906670CDD /* RoomCaptureRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = E78D94B24D2AB18DA74DD4D3 /* RoomCaptureRepresentable.swift */; };
 		EC6B4FD1E91A04911C370B23 /* ScanRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F1DB39A49C2AFE040165840 /* ScanRecord.swift */; };
 		F40F67FAC6756A4521982309 /* UnitSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 731115085003FD13639169C5 /* UnitSystem.swift */; };
-		F95292B85DB1EBD8D631BE08 /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 8D1F7A23E4E5ED14359E7785 /* Shaders.metal */; };
-		FCBA6D52E692740943D7B39C /* MetalPointCloudRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93C40E11D53BCA275B002AE4 /* MetalPointCloudRenderer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -79,8 +74,6 @@
 		34EE01AB83E39C24C3CD2677 /* CSVExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVExporter.swift; sourceTree = "<group>"; };
 		3E24924C76C28845B801B82C /* Structura.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Structura.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4777BD520CD3D0D69CBE6743 /* PointCloudExportModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PointCloudExportModels.swift; sourceTree = "<group>"; };
-		540CA5941A41374498883C58 /* PointCloudTypes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PointCloudTypes.swift; sourceTree = "<group>"; };
-		56B62A548674A0CAA0D196D1 /* PointCloudMetalView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PointCloudMetalView.swift; sourceTree = "<group>"; };
 		580B42433D5D49AF708A2CEF /* PerformanceMonitor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PerformanceMonitor.swift; sourceTree = "<group>"; };
 		585CAC98AE573C3D54CA8699 /* PointCloudStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PointCloudStore.swift; sourceTree = "<group>"; };
 		67C5CD0BC15A87A0AB74E5BD /* PDFExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFExporter.swift; sourceTree = "<group>"; };
@@ -93,13 +86,10 @@
 		83AE0C3A1CE9AA9883A95E13 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		863FE9E182C6FF0E7485919B /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		8B01C9230240DE02C68C495B /* BlueprintBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlueprintBackdrop.swift; sourceTree = "<group>"; };
-		8D1F7A23E4E5ED14359E7785 /* Shaders.metal */ = {isa = PBXFileReference; includeInIndex = 1; path = Shaders.metal; sourceTree = "<group>"; };
 		8DF852FB48CD3854642A5602 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		8EC478D9EEAFA943B5E7DFC7 /* HapticPatterns.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HapticPatterns.swift; sourceTree = "<group>"; };
 		8F1DB39A49C2AFE040165840 /* ScanRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanRecord.swift; sourceTree = "<group>"; };
-		93C40E11D53BCA275B002AE4 /* MetalPointCloudRenderer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetalPointCloudRenderer.swift; sourceTree = "<group>"; };
 		9F2D1BB617A4B198C03673AC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		A200842F6CDDD045BE845A5E /* RingBuffer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RingBuffer.swift; sourceTree = "<group>"; };
 		A27626CB4F35FE7C2AFFD087 /* PointCloudFrame.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PointCloudFrame.swift; sourceTree = "<group>"; };
 		A54ECCBFE7B5F5AEE59C49EF /* CornerBrackets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CornerBrackets.swift; sourceTree = "<group>"; };
 		B7729D532E4D0E3C98E539BC /* LegalLinks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalLinks.swift; sourceTree = "<group>"; };
@@ -283,11 +273,6 @@
 		C5069ABC9FD24C05729EDA48 /* Metal */ = {
 			isa = PBXGroup;
 			children = (
-				A200842F6CDDD045BE845A5E /* RingBuffer.swift */,
-				540CA5941A41374498883C58 /* PointCloudTypes.swift */,
-				8D1F7A23E4E5ED14359E7785 /* Shaders.metal */,
-				93C40E11D53BCA275B002AE4 /* MetalPointCloudRenderer.swift */,
-				56B62A548674A0CAA0D196D1 /* PointCloudMetalView.swift */,
 			);
 			name = Metal;
 			path = Metal;
@@ -444,11 +429,6 @@
 				D926D738D38EFD1368D3C8FA /* ARPointCloudSession.swift in Sources */,
 				8BBF5964A6F7FC3B3544A312 /* ProScanCoordinator.swift in Sources */,
 				12E1DE3D98AAD735D94AF1B0 /* ProScanCaptureView.swift in Sources */,
-				515FCB68AA50891A8C391BAE /* RingBuffer.swift in Sources */,
-				2510A9370F2D59B9389A1D11 /* PointCloudTypes.swift in Sources */,
-				F95292B85DB1EBD8D631BE08 /* Shaders.metal in Sources */,
-				FCBA6D52E692740943D7B39C /* MetalPointCloudRenderer.swift in Sources */,
-				90DDF45D836CB1263FC06074 /* PointCloudMetalView.swift in Sources */,
 				60385EE02E3D3CE456560DD2 /* HapticEngineManager.swift in Sources */,
 				0239007327DED7E1B1D3B0C1 /* HapticPatterns.swift in Sources */,
 				BF3721E2E323E0C880F830CA /* HapticFeedbackAdapter.swift in Sources */,
