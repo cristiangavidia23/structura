@@ -11,6 +11,16 @@ final class ProScanCoordinator: ObservableObject {
     @Published private(set) var isRunning = false
     @Published var isMeshVisible = true
     @Published var failureMessage: String?
+    @Published private(set) var elapsedSeconds: Int = 0
+    @Published private(set) var isRunningLong = false
+
+    /// Pro Scan has no loop closure or relocalization — ARKit's estimated
+    /// position just keeps drifting the longer and further a pass runs,
+    /// which visibly warps the captured geometry. There's no code fix for
+    /// that within a single short ARKit session, so the practical mitigation
+    /// is keeping passes short: nudge the user once a scan runs long enough
+    /// that drift is likely to be noticeable.
+    static let recommendedMaxDuration = 40
 
     let performanceMonitor = PerformanceMonitor()
     let pointCloudStore = PointCloudStore()
@@ -22,6 +32,7 @@ final class ProScanCoordinator: ObservableObject {
 
     private var wasTrackingDegraded = false
     private var meshCountTimer: Timer?
+    private var startedAt: Date?
 
     static var isSupported: Bool { ARPointCloudSession.isSupported }
 
@@ -52,16 +63,22 @@ final class ProScanCoordinator: ObservableObject {
         hapticEngine.start()
         arSession.start(viewportSize: viewportSize, interfaceOrientation: interfaceOrientation)
         isRunning = true
+        elapsedSeconds = 0
+        isRunningLong = false
+        startedAt = Date()
 
         // Reports the count that will actually be exported (the fused mesh,
         // not the raw per-frame depth) — polled rather than pushed, since
-        // it only needs to be roughly live for the HUD, not per-frame.
+        // it only needs to be roughly live for the HUD, not per-frame. Also
+        // where elapsed duration is tracked, to nudge the user once drift
+        // is likely to have become noticeable.
         meshCountTimer?.invalidate()
         meshCountTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             guard let self else { return }
             let count = self.arSession.currentMeshPoints().count
             Task { @MainActor in
                 self.performanceMonitor.reportPointCount(count)
+                self.tickElapsed()
             }
         }
     }
@@ -73,7 +90,17 @@ final class ProScanCoordinator: ObservableObject {
         hapticEngine.stop()
         meshCountTimer?.invalidate()
         meshCountTimer = nil
+        startedAt = nil
         isRunning = false
+    }
+
+    private func tickElapsed() {
+        guard let startedAt else { return }
+        elapsedSeconds = Int(Date().timeIntervalSince(startedAt))
+        if elapsedSeconds == Self.recommendedMaxDuration && !isRunningLong {
+            isRunningLong = true
+            haptics.trackingLostProgressive()
+        }
     }
 
     func confirmMeshClosed() {

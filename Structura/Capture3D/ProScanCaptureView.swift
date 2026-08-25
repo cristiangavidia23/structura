@@ -2,10 +2,10 @@ import SwiftUI
 import UIKit
 
 /// The Pro Scan second pass: a standalone full-screen capture using raw
-/// ARKit + Metal, run only after RoomPlan's session has fully stopped (see
-/// plan notes on ARKit's single-active-session constraint). Produces a
-/// dense, confidence-heatmapped point cloud exported to PLY/LAS and
-/// attached to the existing scan record.
+/// ARKit, run only after RoomPlan's session has fully stopped (see plan
+/// notes on ARKit's single-active-session constraint). Produces a dense,
+/// real-color point cloud (from ARKit's fused mesh reconstruction) exported
+/// to PLY/LAS and attached to the existing scan record.
 struct ProScanCaptureView: View {
     let record: ScanRecord
     let store: ScanStore
@@ -29,9 +29,12 @@ struct ProScanCaptureView: View {
                         .frame(maxHeight: .infinity, alignment: .top)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                    MetricsHUD(monitor: proScan.performanceMonitor)
-                        .frame(maxHeight: .infinity, alignment: .top)
-                        .padding(.top, 16)
+                    VStack(spacing: 8) {
+                        MetricsHUD(monitor: proScan.performanceMonitor)
+                        guidanceBanner
+                    }
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .padding(.top, 16)
 
                     RadialToolMenu(items: [
                         RadialToolItem(systemImage: "square.grid.3x3", isActive: proScan.isMeshVisible) {
@@ -79,6 +82,29 @@ struct ProScanCaptureView: View {
                 unsupportedDevice
             }
         }
+    }
+
+    /// Pro Scan has no loop closure — the longer and further a pass runs,
+    /// the more its estimated position can drift and visibly warp the
+    /// result. There's no code fix for that within a single short ARKit
+    /// session, so the practical mitigation is keeping passes short and
+    /// deliberate; this nudges toward that instead of silently producing a
+    /// warped scan with no explanation.
+    private var guidanceBanner: some View {
+        Group {
+            if proScan.isRunningLong {
+                Label("Escaneo largo — termina pronto para evitar más desalineación", systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.yellow)
+            } else {
+                Label("Muévete despacio, en un área pequeña, con buena luz", systemImage: "info.circle")
+                    .foregroundStyle(.white.opacity(0.85))
+            }
+        }
+        .font(.caption2.weight(.medium))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(.black.opacity(0.55), in: Capsule())
+        .animation(.easeInOut, value: proScan.isRunningLong)
     }
 
     private var errorPresented: Binding<Bool> {
