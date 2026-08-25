@@ -18,6 +18,17 @@ struct ResultView: View {
     private enum Mode: String, CaseIterable {
         case dollhouse = "3D"
         case plan = "Plano"
+        case heatmap = "Heatmap"
+    }
+
+    /// Heatmap only shows up once a Pro Scan pass actually produced a point
+    /// cloud for this scan — nothing to view otherwise.
+    private var availableModes: [Mode] {
+        var modes: [Mode] = [.dollhouse, .plan]
+        if store.plyURL(for: currentScan) != nil {
+            modes.append(.heatmap)
+        }
+        return modes
     }
 
     private var unitSystem: UnitSystem {
@@ -44,7 +55,7 @@ struct ResultView: View {
                 content
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                if let plan, !plan.walls.isEmpty {
+                if let plan, !plan.walls.isEmpty, mode != .heatmap {
                     VStack(spacing: 0) {
                         if mode == .plan, let caveat = caveat(for: plan) {
                             Text(caveat)
@@ -87,12 +98,12 @@ struct ResultView: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Picker("Vista", selection: $mode) {
-                    ForEach(Mode.allCases, id: \.self) { mode in
+                    ForEach(availableModes, id: \.self) { mode in
                         Text(mode.rawValue).tag(mode)
                     }
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 160)
+                .frame(width: availableModes.count > 2 ? 220 : 160)
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -195,7 +206,11 @@ struct ResultView: View {
 
     @ViewBuilder
     private var content: some View {
-        if let plan, !plan.walls.isEmpty {
+        if mode == .heatmap, let plyURL = store.plyURL(for: currentScan) {
+            HeatmapTabView(plyURL: plyURL)
+                .transition(.opacity.combined(with: .scale(scale: 0.97)))
+                .id(mode)
+        } else if let plan, !plan.walls.isEmpty {
             Group {
                 switch mode {
                 case .dollhouse:
@@ -205,6 +220,8 @@ struct ResultView: View {
                     FloorPlanView(plan: plan, unitSystem: unitSystem)
                         .padding(8)
                         .transition(.opacity.combined(with: .scale(scale: 1.03)))
+                case .heatmap:
+                    EmptyView()
                 }
             }
             .id(mode)
@@ -278,6 +295,46 @@ struct ResultView: View {
                 .font(.subheadline.weight(.medium))
                 .monospacedDigit()
                 .foregroundStyle(Theme.ink)
+        }
+    }
+}
+
+/// Loads the Pro Scan point cloud from its exported PLY lazily, once, when
+/// this tab first appears — the file can hold hundreds of thousands of
+/// points, not something to parse on every mode switch.
+private struct HeatmapTabView: View {
+    let plyURL: URL
+
+    @State private var points: [PointCloudExportPoint]?
+    @State private var isLoading = true
+
+    var body: some View {
+        Group {
+            if let points, !points.isEmpty {
+                PointCloudSceneView(points: points)
+            } else if isLoading {
+                ProgressView()
+            } else {
+                VStack(spacing: 10) {
+                    Image(systemName: "aqi.medium")
+                        .font(.system(size: 30))
+                        .foregroundStyle(Theme.ink.opacity(0.3))
+                    Text("No se pudo cargar la nube de puntos")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Theme.ink)
+                }
+            }
+        }
+        .task {
+            // Off the main actor: a Pro Scan PLY can hold hundreds of
+            // thousands of points, and parsing that inline would hitch the
+            // tab switch.
+            let url = plyURL
+            let loaded = await Task.detached(priority: .userInitiated) {
+                PLYPointCloudReader.read(from: url)
+            }.value
+            points = loaded
+            isLoading = false
         }
     }
 }
