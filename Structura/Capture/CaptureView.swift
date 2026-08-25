@@ -215,7 +215,7 @@ struct CaptureView: View {
         isBuildingStructure = true
         Task {
             do {
-                let structure = try await StructureBuilder(options: []).capturedStructure(from: capturedRooms)
+                let structure = try await StructureBuilder(options: [.beautifyObjects]).capturedStructure(from: capturedRooms)
                 isBuildingStructure = false
                 onFinish(structure)
                 dismiss()

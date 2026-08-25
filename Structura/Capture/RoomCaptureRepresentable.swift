@@ -26,7 +26,13 @@ final class CaptureCoordinator: NSObject, ObservableObject, RoomCaptureViewDeleg
 
     func start() {
         guard let captureView else { return }
-        captureView.captureSession.run(configuration: RoomCaptureSession.Configuration())
+        var configuration = RoomCaptureSession.Configuration()
+        // Apple's own tracking-calibration guidance overlay — the single
+        // biggest lever RoomPlan exposes for scan quality, since a lot of
+        // imprecision comes from starting the scan before ARKit has a good
+        // initial fix rather than from anything during the scan itself.
+        configuration.isCoachingEnabled = true
+        captureView.captureSession.run(configuration: configuration)
     }
 
     func stop() {
@@ -44,6 +50,13 @@ final class CaptureCoordinator: NSObject, ObservableObject, RoomCaptureViewDeleg
     func captureSession(_ session: RoomCaptureSession, didProvide instruction: RoomCaptureSession.Instruction) {
         let text = Self.text(for: instruction)
         DispatchQueue.main.async {
+            // A tactile nudge alongside the banner: RoomPlan's own
+            // instructions ("slow down", "move closer"...) are the most
+            // direct signal for scan precision, and most of them fire while
+            // the user is looking at the room, not at the on-screen text.
+            if text != nil, self.instructionText == nil {
+                Haptics.warning()
+            }
             self.instructionText = text
         }
     }
