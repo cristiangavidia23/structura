@@ -155,14 +155,10 @@ struct ProScanCaptureView: View {
         proScan.stop()
         isExporting = true
 
-        let pointCloudStore = proScan.pointCloudStore
-        let exportPoints = (0..<pointCloudStore.accumulatedPositions.count).map { i in
-            PointCloudExportPoint(
-                position: pointCloudStore.accumulatedPositions[i],
-                confidence: pointCloudStore.accumulatedConfidences[i],
-                color: pointCloudStore.accumulatedColors[i]
-            )
-        }
+        // ARKit's fused mesh reconstruction, not the raw per-frame depth
+        // that only drives the live heatmap overlay — meaningfully more
+        // stable since it's built by integrating many frames over time.
+        let exportPoints = proScan.currentMeshPoints()
         let directory = store.scansDirectory
         let baseName = "\(record.id.uuidString)_pointcloud"
 

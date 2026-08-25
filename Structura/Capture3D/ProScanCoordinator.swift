@@ -76,6 +76,13 @@ final class ProScanCoordinator: ObservableObject {
         haptics.meshClosed()
     }
 
+    /// The scan to actually export/visualize: ARKit's fused mesh
+    /// reconstruction rather than the raw per-frame depth accumulated in
+    /// `pointCloudStore` (that one only drives the live heatmap overlay).
+    func currentMeshPoints() -> [PointCloudExportPoint] {
+        arSession.currentMeshPoints()
+    }
+
     private func handleTrackingState(_ state: ARCamera.TrackingState) {
         performanceMonitor.reportTrackingState(state)
 

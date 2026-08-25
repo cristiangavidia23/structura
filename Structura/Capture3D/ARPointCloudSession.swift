@@ -24,6 +24,26 @@ final class ARPointCloudSession: NSObject {
     var onTrackingState: ((ARCamera.TrackingState) -> Void)?
     var onFailure: ((String) -> Void)?
 
+    /// Points sourced from ARKit's own fused mesh reconstruction
+    /// (`ARMeshAnchor`) rather than raw per-frame depth — ARKit builds this
+    /// by integrating many frames into a voxel volume over time, so it's
+    /// meaningfully more stable than any single frame's depth map. This is
+    /// what export/`PointCloudSceneView` use; the live heatmap overlay
+    /// during capture still uses the raw per-frame `onFrame` pipeline
+    /// above, where instantaneous per-frame quality is the actual signal.
+    private let meshLock = NSLock()
+    private var meshPointsByAnchor: [UUID: [PointCloudExportPoint]] = [:]
+
+    /// Every mesh chunk is dense enough that sampling every vertex would be
+    /// wasteful; a chunk update fires frequently as ARKit keeps refining it.
+    private let meshVertexStride = 3
+
+    func currentMeshPoints() -> [PointCloudExportPoint] {
+        meshLock.lock()
+        defer { meshLock.unlock() }
+        return meshPointsByAnchor.values.flatMap { $0 }
+    }
+
     static var isSupported: Bool {
         ARWorldTrackingConfiguration.supportsSceneReconstruction(.meshWithClassification)
     }
@@ -46,6 +66,7 @@ final class ARPointCloudSession: NSObject {
         // exact moment this second pass starts (its `stop()` call is not
         // guaranteed to have finished tearing down hardware synchronously).
         // A short grace period avoids racing that teardown.
+        resetMesh()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             guard let self else { return }
             let configuration = ARWorldTrackingConfiguration()
@@ -59,6 +80,88 @@ final class ARPointCloudSession: NSObject {
 
     func stop() {
         session.pause()
+    }
+
+    private func resetMesh() {
+        meshLock.lock()
+        meshPointsByAnchor.removeAll(keepingCapacity: false)
+        meshLock.unlock()
+    }
+
+    /// Extracts a mesh chunk's vertices (already in the anchor's local
+    /// space, fused/smoothed by ARKit) into world space, sampling real
+    /// camera color for each via the session's current frame. Replaces
+    /// this anchor's previous point set wholesale — ARKit periodically
+    /// re-triangulates a chunk as it refines, so stale vertices from an
+    /// earlier version of the same chunk shouldn't linger alongside it.
+    private func processMeshAnchor(_ anchor: ARMeshAnchor, frame: ARFrame) {
+        let colorImage = frame.capturedImage
+        CVPixelBufferLockBaseAddress(colorImage, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(colorImage, .readOnly) }
+
+        let lumaBase = CVPixelBufferGetBaseAddressOfPlane(colorImage, 0)
+        let lumaBytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(colorImage, 0)
+        let lumaWidth = CVPixelBufferGetWidthOfPlane(colorImage, 0)
+        let lumaHeight = CVPixelBufferGetHeightOfPlane(colorImage, 0)
+        let chromaBase = CVPixelBufferGetBaseAddressOfPlane(colorImage, 1)
+        let chromaBytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(colorImage, 1)
+
+        let intrinsics = frame.camera.intrinsics
+        let imageResolution = frame.camera.imageResolution
+        let fx = intrinsics[0][0], fy = intrinsics[1][1]
+        let cx = intrinsics[2][0], cy = intrinsics[2][1]
+        let colorScaleX = Float(lumaWidth) / Float(imageResolution.width)
+        let colorScaleY = Float(lumaHeight) / Float(imageResolution.height)
+
+        // World -> camera space, to reproject each mesh vertex back into
+        // the color image and sample what the camera actually saw there.
+        let viewMatrix = frame.camera.transform.inverse
+        let anchorTransform = anchor.transform
+
+        let vertexSource = anchor.geometry.vertices
+        let vertexCount = vertexSource.count
+        let vertexBuffer = vertexSource.buffer.contents().advanced(by: vertexSource.offset)
+        let vertexStride = vertexSource.stride
+
+        var points: [PointCloudExportPoint] = []
+        points.reserveCapacity(vertexCount / meshVertexStride + 1)
+
+        var i = 0
+        while i < vertexCount {
+            let localVertex = vertexBuffer
+                .advanced(by: i * vertexStride)
+                .assumingMemoryBound(to: SIMD3<Float>.self)
+                .pointee
+
+            let world4 = anchorTransform * SIMD4<Float>(localVertex, 1)
+            let worldVertex = SIMD3<Float>(world4.x, world4.y, world4.z)
+
+            let camera4 = viewMatrix * SIMD4<Float>(worldVertex, 1)
+            guard camera4.z < 0 else { i += meshVertexStride; continue } // behind the camera this frame
+
+            let depth = -camera4.z
+            let imageX = camera4.x * fx / depth + cx
+            let imageY = camera4.y * fy / depth + cy
+            let colorX = Int((imageX * colorScaleX).rounded())
+            let colorY = Int((imageY * colorScaleY).rounded())
+            guard colorX >= 0, colorX < lumaWidth, colorY >= 0, colorY < lumaHeight else {
+                i += meshVertexStride
+                continue
+            }
+
+            let color = Self.sampleColor(
+                lumaBase: lumaBase, lumaBytesPerRow: lumaBytesPerRow,
+                chromaBase: chromaBase, chromaBytesPerRow: chromaBytesPerRow,
+                x: colorX, y: colorY
+            )
+            points.append(PointCloudExportPoint(position: worldVertex, confidence: 1.0, color: color))
+
+            i += meshVertexStride
+        }
+
+        meshLock.lock()
+        meshPointsByAnchor[anchor.identifier] = points
+        meshLock.unlock()
     }
 
     /// Unprojects the depth map into world-space points using that frame's
@@ -243,6 +346,31 @@ extension ARPointCloudSession: ARSessionDelegate {
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
         processFrame(frame)
         onTrackingState?(frame.camera.trackingState)
+    }
+
+    func session(_ session: ARSession, didAdd anchors: [ARAnchor]) {
+        updateMeshAnchors(anchors, session: session)
+    }
+
+    func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
+        updateMeshAnchors(anchors, session: session)
+    }
+
+    func session(_ session: ARSession, didRemove anchors: [ARAnchor]) {
+        guard anchors.contains(where: { $0 is ARMeshAnchor }) else { return }
+        meshLock.lock()
+        for anchor in anchors {
+            meshPointsByAnchor.removeValue(forKey: anchor.identifier)
+        }
+        meshLock.unlock()
+    }
+
+    private func updateMeshAnchors(_ anchors: [ARAnchor], session: ARSession) {
+        guard let frame = session.currentFrame else { return }
+        for anchor in anchors {
+            guard let meshAnchor = anchor as? ARMeshAnchor else { continue }
+            processMeshAnchor(meshAnchor, frame: frame)
+        }
     }
 
     func session(_ session: ARSession, didFailWithError error: Error) {
