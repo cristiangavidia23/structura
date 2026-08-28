@@ -10,6 +10,7 @@ struct HomeView: View {
     @State private var saveErrorMessage: String?
     @State private var renamingScan: ScanRecord?
     @State private var renameText = ""
+    @State private var deletingScan: ScanRecord?
 
     /// v1 pricing: the first scan is free (export is what's gated, not scanning
     /// it); any scan beyond that needs premium.
@@ -47,8 +48,7 @@ struct HomeView: View {
                                         Label("Renombrar", systemImage: "pencil")
                                     }
                                     Button(role: .destructive) {
-                                        Haptics.warning()
-                                        store.delete(scan)
+                                        deletingScan = scan
                                     } label: {
                                         Label("Eliminar", systemImage: "trash")
                                     }
@@ -94,6 +94,22 @@ struct HomeView: View {
                     renamingScan = nil
                 }
             }
+            .confirmationDialog(
+                "¿Eliminar \"\(deletingScan?.name ?? "")\"?",
+                isPresented: deletingPresented,
+                titleVisibility: .visible
+            ) {
+                Button("Eliminar", role: .destructive) {
+                    if let deletingScan {
+                        Haptics.warning()
+                        store.delete(deletingScan)
+                    }
+                    deletingScan = nil
+                }
+                Button("Cancelar", role: .cancel) { deletingScan = nil }
+            } message: {
+                Text("Se borrará el modelo 3D, el plano y la nube de puntos de este escaneo. No se puede deshacer.")
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
@@ -128,6 +144,13 @@ struct HomeView: View {
         Binding(
             get: { renamingScan != nil },
             set: { isPresented in if !isPresented { renamingScan = nil } }
+        )
+    }
+
+    private var deletingPresented: Binding<Bool> {
+        Binding(
+            get: { deletingScan != nil },
+            set: { isPresented in if !isPresented { deletingScan = nil } }
         )
     }
 

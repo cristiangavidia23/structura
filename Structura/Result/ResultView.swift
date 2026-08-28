@@ -207,7 +207,7 @@ struct ResultView: View {
     @ViewBuilder
     private var content: some View {
         if mode == .heatmap, let plyURL = store.plyURL(for: currentScan) {
-            HeatmapTabView(plyURL: plyURL)
+            HeatmapTabView(plyURL: plyURL, quality: currentScan.pointCloudQuality, unitSystem: unitSystem)
                 .transition(.opacity.combined(with: .scale(scale: 0.97)))
                 .id(mode)
         } else if let plan, !plan.walls.isEmpty {
@@ -301,29 +301,52 @@ struct ResultView: View {
 
 /// Loads the Pro Scan point cloud from its exported PLY lazily, once, when
 /// this tab first appears — the file can hold hundreds of thousands of
-/// points, not something to parse on every mode switch.
+/// points, not something to parse on every mode switch. Also hosts the
+/// tap-to-measure tool and the post-capture QA panel (coverage, tracking
+/// quality, drift risk).
 private struct HeatmapTabView: View {
     let plyURL: URL
+    /// Persisted from the export that produced this file (`ScanRecord
+    /// .pointCloudQuality`) — `nil` for scans exported before Fase 5, or if
+    /// the metadata step failed independently of the point cloud itself.
+    let quality: PointCloudQualitySummary?
+    let unitSystem: UnitSystem
 
     @State private var points: [PointCloudExportPoint]?
     @State private var isLoading = true
+    @State private var coverage: ScanCoverageEstimator.Report?
+    @StateObject private var measurement = MeasurementSession()
+    @State private var isPresentingCalibrationInput = false
+    @State private var calibrationReferenceText = ""
 
     var body: some View {
-        Group {
-            if let points, !points.isEmpty {
-                PointCloudSceneView(points: points)
-            } else if isLoading {
-                ProgressView()
-            } else {
-                VStack(spacing: 10) {
-                    Image(systemName: "aqi.medium")
-                        .font(.system(size: 30))
-                        .foregroundStyle(Theme.ink.opacity(0.3))
-                    Text("No se pudo cargar la nube de puntos")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Theme.ink)
+        VStack(spacing: 0) {
+            ZStack(alignment: .top) {
+                Group {
+                    if let points, !points.isEmpty {
+                        PointCloudSceneView(points: points, measurement: measurement)
+                    } else if isLoading {
+                        ProgressView()
+                    } else {
+                        VStack(spacing: 10) {
+                            Image(systemName: "aqi.medium")
+                                .font(.system(size: 30))
+                                .foregroundStyle(Theme.ink.opacity(0.3))
+                            Text("No se pudo cargar la nube de puntos")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(Theme.ink)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                if let points, !points.isEmpty {
+                    measurementOverlay
+                        .padding(.top, 12)
                 }
             }
+
+            qaPanel
         }
         .task {
             // Off the main actor: a Pro Scan PLY can hold hundreds of
@@ -335,6 +358,96 @@ private struct HeatmapTabView: View {
             }.value
             points = loaded
             isLoading = false
+
+            guard let loaded else { return }
+            coverage = await Task.detached(priority: .utility) {
+                ScanCoverageEstimator.estimateCoverage(of: loaded, voxelSize: ProScanConfig.coverageVoxelSizeMeters)
+            }.value
         }
+        .alert("Calibrar con distancia conocida", isPresented: $isPresentingCalibrationInput) {
+            TextField("Distancia real (m)", text: $calibrationReferenceText)
+                .keyboardType(.decimalPad)
+            Button("Cancelar", role: .cancel) {}
+            Button("Calcular error") {
+                let normalized = calibrationReferenceText.replacingOccurrences(of: ",", with: ".")
+                if let reference = Float(normalized) {
+                    measurement.calibrate(referenceMeters: reference)
+                }
+            }
+        } message: {
+            Text("Mide un objeto o distancia que ya conoces (por ejemplo, una puerta estándar o una cinta métrica) y escribe aquí su medida real en metros.")
+        }
+    }
+
+    @ViewBuilder
+    private var measurementOverlay: some View {
+        VStack(spacing: 6) {
+            if let distance = measurement.distanceMeters {
+                HStack(spacing: 10) {
+                    Label(
+                        unitSystem.formatLength(meters: Double(distance)),
+                        systemImage: measurement.bothPointsSnapped ? "checkmark.seal.fill" : "exclamationmark.triangle.fill"
+                    )
+                    .foregroundStyle(measurement.bothPointsSnapped ? Color.green : Color.yellow)
+
+                    Button("Calibrar") { isPresentingCalibrationInput = true }
+                        .font(.caption.weight(.semibold))
+                    Button("Limpiar") { measurement.clear() }
+                        .font(.caption)
+                }
+                if let calibration = measurement.calibrationResult {
+                    calibrationSummary(calibration)
+                }
+            } else {
+                Text(
+                    measurement.firstPoint == nil
+                        ? "Toca dos puntos de la nube para medir la distancia entre ellos"
+                        : "Toca un segundo punto para completar la medición"
+                )
+                .font(.caption)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(.ultraThinMaterial, in: Capsule())
+        .foregroundStyle(Theme.ink)
+        .animation(.easeInOut, value: measurement.distanceMeters)
+    }
+
+    private func calibrationSummary(_ result: MeasurementCalibration.Result) -> some View {
+        let percentageText = result.errorPercentage.map { String(format: "%.1f%%", $0) } ?? "—"
+        return Text("Error: \(unitSystem.formatLength(meters: Double(result.absoluteErrorMeters))) (\(percentageText))")
+            .font(.caption2)
+            .foregroundStyle(Theme.ink.opacity(0.7))
+    }
+
+    @ViewBuilder
+    private var qaPanel: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let quality {
+                qualityLine(quality)
+                if ProScanConfig.isDriftRiskElevated(durationSeconds: quality.durationSeconds) {
+                    Label("Escaneo largo — la deriva acumulada puede ser notable", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.orange)
+                }
+            }
+            if let coverage {
+                Text("Cobertura estimada: \(Int(coverage.coverageRatio * 100))% del volumen del escaneo")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.ink.opacity(0.55))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.cardBackground)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func qualityLine(_ quality: PointCloudQualitySummary) -> some View {
+        Text("\(quality.pointCount.formatted()) puntos · confianza media \(Int(quality.meanConfidence * 100))% · tracking: \(quality.trackingQuality) · \(quality.durationSeconds)s")
+            .font(.caption2)
+            .foregroundStyle(Theme.ink.opacity(0.55))
     }
 }

@@ -24,6 +24,7 @@ targets:
       path: Structura/Info.plist
       properties:
         NSCameraUsageDescription: "Structura usa la cámara junto con el sensor LiDAR para escanear tu ambiente y generar el plano 2D acotado y el modelo 3D."
+        NSLocationWhenInUseUsageDescription: "Structura puede guardar la ubicación de un escaneo Pro Scan en sus metadatos de exportación. Es opcional: puedes negarlo sin afectar el escaneo."
         UIRequiredDeviceCapabilities:
           - arkit
           - lidar
@@ -44,3 +45,50 @@ targets:
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+  # Host-less logic-test bundle: `Structura` requires `arkit`/`lidar` device
+  # capabilities (see its Info.plist), so it can't install on the Simulator
+  # and can't serve as this target's test host. Rather than depending on the
+  # app target, this compiles the specific pure-Swift source files under
+  # test directly as its own sources — no app module, no device, no host.
+  StructuraTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Structura/Capture3D/ProScanConfig.swift
+      - path: Structura/Capture3D/CameraUnprojection.swift
+      - path: Structura/Capture3D/ConfidenceGrid.swift
+      - path: Structura/Capture3D/VoxelAccumulator.swift
+      - path: Structura/Export/PointCloud/PointCloudMeshClassification.swift
+      - path: Structura/Export/PointCloud/PointCloudExportModels.swift
+      - path: Structura/Export/PointCloud/TopographicAxisConvention.swift
+      - path: Structura/Export/PointCloud/LocalEngineeringCRS.swift
+      - path: Structura/Export/PointCloud/LASExporter.swift
+      - path: Structura/Export/PointCloud/PLYExporter.swift
+      - path: Structura/Export/PointCloud/PLYPointCloudReader.swift
+      - path: Structura/Export/PointCloud/ControlPointTransform.swift
+      - path: Structura/Capture3D/RelocalizationConfirmation.swift
+      - path: Structura/Result/PointCloudRaycast.swift
+      - path: Structura/Result/PlaneSnapping.swift
+      - path: Structura/Result/MeasurementCalibration.swift
+      - path: Structura/Result/ScanCoverageEstimator.swift
+      - path: StructuraTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cristiangavidia.structura.tests
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        GENERATE_INFOPLIST_FILE: true
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: WREX368LLS
+
+schemes:
+  Structura:
+    build:
+      targets:
+        Structura: all
+    test:
+      targets:
+        - StructuraTests

@@ -20,6 +20,8 @@
 	<string>1</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Structura usa la cámara junto con el sensor LiDAR para escanear tu ambiente y generar el plano 2D acotado y el modelo 3D.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Structura puede guardar la ubicación de un escaneo Pro Scan en sus metadatos de exportación. Es opcional: puedes negarlo sin afectar el escaneo.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

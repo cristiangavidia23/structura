@@ -15,6 +15,8 @@ struct ProScanCaptureView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isExporting = false
     @State private var exportError: String?
+    @State private var isConfirmingCancel = false
+    @State private var autosaveTask: Task<Void, Never>?
 
     var body: some View {
         Group {
@@ -32,6 +34,9 @@ struct ProScanCaptureView: View {
                     VStack(spacing: 8) {
                         MetricsHUD(monitor: proScan.performanceMonitor)
                         guidanceBanner
+                        if proScan.isCoordinateFrameBroken {
+                            relocalizingBanner
+                        }
                     }
                     .frame(maxHeight: .infinity, alignment: .top)
                     .padding(.top, 16)
@@ -66,8 +71,20 @@ struct ProScanCaptureView: View {
                         viewportSize: UIScreen.main.bounds.size,
                         interfaceOrientation: scene?.interfaceOrientation ?? .portrait
                     )
+                    startAutosaveLoop()
                 }
-                .onDisappear { proScan.stop() }
+                .onDisappear {
+                    autosaveTask?.cancel()
+                    autosaveTask = nil
+                    proScan.stop()
+                }
+                .onChange(of: proScan.stopReason) { _, stopReason in
+                    // The coordinator stopped itself (low storage/battery/
+                    // thermal) — finish and export whatever was captured
+                    // rather than let the session just sit paused.
+                    guard stopReason != nil, !isExporting else { return }
+                    finish()
+                }
                 .alert("No se pudo exportar", isPresented: errorPresented) {
                     Button("Cerrar", role: .cancel) { exportError = nil }
                 } message: {
@@ -77,6 +94,24 @@ struct ProScanCaptureView: View {
                     Button("Cerrar", role: .cancel) { proScan.failureMessage = nil }
                 } message: {
                     Text(proScan.failureMessage ?? "")
+                }
+                .alert("Escaneo detenido", isPresented: stopReasonPresented) {
+                    Button("Cerrar", role: .cancel) {}
+                } message: {
+                    Text(proScan.stopReason?.message ?? "")
+                }
+                .confirmationDialog(
+                    "¿Cancelar este escaneo?",
+                    isPresented: $isConfirmingCancel,
+                    titleVisibility: .visible
+                ) {
+                    Button("Descartar escaneo", role: .destructive) {
+                        proScan.stop()
+                        dismiss()
+                    }
+                    Button("Seguir escaneando", role: .cancel) {}
+                } message: {
+                    Text("Vas a perder el progreso de este pase de Pro Scan.")
                 }
             } else {
                 unsupportedDevice
@@ -115,10 +150,33 @@ struct ProScanCaptureView: View {
         Binding(get: { proScan.failureMessage != nil }, set: { if !$0 { proScan.failureMessage = nil } })
     }
 
+    private var stopReasonPresented: Binding<Bool> {
+        Binding(get: { proScan.stopReason != nil }, set: { _ in })
+    }
+
+    /// A vanilla `ARSession` gives no hard guarantee the coordinate origin
+    /// survived an interruption intact (see `ARPointCloudSession`) — this
+    /// mirrors that caution to the user instead of silently looking like
+    /// scanning has resumed normally the instant ARKit reports `.normal`.
+    private var relocalizingBanner: some View {
+        Label("Reubicando… espera antes de seguir escaneando", systemImage: "location.slash.fill")
+            .font(.caption2.weight(.medium))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(.black.opacity(0.55), in: Capsule())
+            .foregroundStyle(.yellow)
+    }
+
     private var cancelButton: some View {
         Button {
-            proScan.stop()
-            dismiss()
+            // No progress worth confirming yet if the user just opened Pro
+            // Scan and immediately backed out.
+            if proScan.elapsedSeconds > 2 {
+                isConfirmingCancel = true
+            } else {
+                proScan.stop()
+                dismiss()
+            }
         } label: {
             Image(systemName: "xmark")
                 .font(.body.weight(.semibold))
@@ -154,15 +212,34 @@ struct ProScanCaptureView: View {
         let directory = store.scansDirectory
         let baseName = "\(record.id.uuidString)_pointcloud"
 
+        // Captured before the coordinator resets on its next `start()` —
+        // `stop()` above leaves these values in place from this session.
+        let durationSeconds = proScan.elapsedSeconds
+        let trackingDegradedTickCount = proScan.trackingDegradedTickCount
+
         Task {
             let coordinate = await PointCloudLocationProvider().requestLocation()
             let metadata = PointCloudExportMetadata(capturedAt: Date(), location: coordinate, pointCount: exportPoints.count)
             let coordinator = PointCloudExportCoordinator()
             var plyURL: URL?
             var lasURL: URL?
+            var metadataReport: ScanMetadataReport?
             do {
                 plyURL = try await coordinator.export(points: exportPoints, metadata: metadata, format: .ply, to: directory, baseName: baseName)
                 lasURL = try await coordinator.export(points: exportPoints, metadata: metadata, format: .las, to: directory, baseName: baseName)
+                // Best-effort: a failure here shouldn't take down an
+                // otherwise-successful PLY/LAS export, so it's isolated
+                // from the `do`/`catch` above that gates those two.
+                metadataReport = try? await coordinator.writeMetadataReport(
+                    points: exportPoints,
+                    metadata: metadata,
+                    durationSeconds: durationSeconds,
+                    trackingDegradedTickCount: trackingDegradedTickCount,
+                    coordinateReferenceSystem: "Local ENU frame, arbitrary horizontal orientation, vertical aligned to gravity — see the accompanying .las file's WKT VLR",
+                    controlPointDeclaredAccuracyMeters: nil,
+                    to: directory,
+                    baseName: baseName
+                )
             } catch {
                 await MainActor.run {
                     isExporting = false
@@ -172,12 +249,58 @@ struct ProScanCaptureView: View {
             }
 
             let location = coordinate.map { (lat: $0.latitude, lon: $0.longitude) }
+            // Mirrors a subset of the just-written `ScanMetadataReport` onto
+            // `ScanRecord` so `ResultView` can show it without re-parsing a
+            // PLY that can hold hundreds of thousands of points.
+            let quality = metadataReport.map {
+                PointCloudQualitySummary(
+                    durationSeconds: $0.durationSeconds,
+                    trackingQuality: $0.trackingQuality,
+                    pointCount: $0.pointCount,
+                    meanConfidence: $0.meanConfidence
+                )
+            }
             await MainActor.run {
-                store.attachPointCloud(plyURL: plyURL, lasURL: lasURL, location: location, to: record)
+                store.attachPointCloud(plyURL: plyURL, lasURL: lasURL, location: location, quality: quality, to: record)
                 isExporting = false
                 onFinished()
                 dismiss()
             }
+        }
+    }
+
+    /// Periodically snapshots the in-progress mesh to the scan's PLY —
+    /// updating the existing `ScanRecord` in place, not a separate
+    /// "recovery" file — so a scan survives the app being killed outright,
+    /// not just backgrounded: if `finish()` never runs, whatever was last
+    /// autosaved stays attached as the record's point cloud. LAS/metadata
+    /// are only written at the real finish (cheaper to skip them here, and
+    /// the app's own PLY viewer is all an autosave needs to serve).
+    private func startAutosaveLoop() {
+        autosaveTask?.cancel()
+        autosaveTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: UInt64(ProScanConfig.autosaveIntervalSeconds * 1_000_000_000))
+                guard !Task.isCancelled else { break }
+                await autosave()
+            }
+        }
+    }
+
+    private func autosave() async {
+        guard proScan.isRunning else { return }
+        let points = proScan.currentMeshPoints()
+        guard !points.isEmpty else { return }
+
+        let metadata = PointCloudExportMetadata(capturedAt: Date(), location: nil, pointCount: points.count)
+        let coordinator = PointCloudExportCoordinator()
+        guard let plyURL = try? await coordinator.export(
+            points: points, metadata: metadata, format: .ply,
+            to: store.scansDirectory, baseName: "\(record.id.uuidString)_pointcloud"
+        ) else { return }
+
+        await MainActor.run {
+            store.attachPointCloud(plyURL: plyURL, lasURL: nil, location: nil, to: record)
         }
     }
 }

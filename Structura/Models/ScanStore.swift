@@ -45,13 +45,29 @@ final class ScanStore: ObservableObject {
 
     /// Records a Pro Scan point-cloud export against an existing scan.
     /// Additive: never touches the USDZ/room artifacts `save` already wrote.
-    func attachPointCloud(plyURL: URL?, lasURL: URL?, location: (lat: Double, lon: Double)?, to record: ScanRecord) {
+    ///
+    /// Also used for mid-capture autosave (see `ProScanCaptureView`): called
+    /// repeatedly with just `plyURL` every few seconds during a live pass,
+    /// so the record always has a reasonably fresh point cloud attached
+    /// even if the app is killed before the scan finishes — `location`/
+    /// `quality` are only known at the real finish, and are left untouched
+    /// (not overwritten with `nil`) on those intermediate calls.
+    func attachPointCloud(
+        plyURL: URL?,
+        lasURL: URL?,
+        location: (lat: Double, lon: Double)?,
+        quality: PointCloudQualitySummary? = nil,
+        to record: ScanRecord
+    ) {
         guard let index = scans.firstIndex(where: { $0.id == record.id }) else { return }
         if let plyURL { scans[index].plyFileName = plyURL.lastPathComponent }
         if let lasURL { scans[index].lasFileName = lasURL.lastPathComponent }
         if let location {
             scans[index].pointCloudLatitude = location.lat
             scans[index].pointCloudLongitude = location.lon
+        }
+        if let quality {
+            scans[index].pointCloudQuality = quality
         }
         persist()
     }

@@ -1,0 +1,271 @@
+import Foundation
+
+/// Single source of truth for every physical/numeric constant the Pro Scan
+/// pipeline depends on. Each value below documents where it comes from — a
+/// hardware/ARKit-documented behavior, a value already shipping elsewhere in
+/// the app (kept here to avoid a second hardcoded copy), or an engineering
+/// placeholder that still needs field calibration. Nothing here should be
+/// re-declared inline anywhere else in `Capture3D` or `Export/PointCloud`.
+///
+/// Coordinate-system assumption used throughout this file and everywhere it
+/// is consumed: ARKit's world and camera spaces are **right-handed, +Y up**
+/// (`ARFrame`/`ARCamera`, Apple's documented convention). Export targets
+/// such as some CAD/GIS pipelines assume **+Z up** instead — any conversion
+/// between the two happens at the export boundary (`Export/PointCloud`),
+/// never here; this file only describes ARKit-space quantities.
+enum ProScanConfig {
+
+    // MARK: - Depth validity
+
+    /// Depth samples outside this range are discarded before they ever reach
+    /// the accumulator. Apple documents the LiDAR scanner's practical range
+    /// as up to roughly 5 m; readings much closer than ~0.25 m are dominated
+    /// by the sensor's minimum focus distance rather than real geometry.
+    /// These bounds are a conservative starting point, not a number lifted
+    /// from a specific published spec sheet — Fase 1's synthetic-plane tests
+    /// and on-device field testing should confirm (or tighten) them before
+    /// they are treated as final.
+    static let validDepthRangeMeters: ClosedRange<Float> = 0.25...5.0
+
+    // MARK: - Confidence gating
+
+    /// `ARConfidenceLevel` (ARKit, `ARDepthData.h`, verified against the
+    /// installed iOS 26.5 SDK) is `Low = 0`, `Medium = 1`, `High = 2`.
+    /// `ARPointCloudSession` normalizes a raw confidence sample as
+    /// `confidenceRaw / Float(ARConfidenceLevel.high.rawValue)` — i.e.
+    /// divides by 2 — so `.medium` corresponds to a normalized value of 0.5.
+    /// Kept as plain numbers here rather than typed as `ARConfidenceLevel`
+    /// directly, so this file has no ARKit dependency and can be compiled
+    /// into the host-less `StructuraTests` logic-test target without
+    /// linking the framework.
+    static let minimumConfidenceRawLevel: Int = 1 // ARConfidenceLevel.medium
+    static let minimumNormalizedConfidence: Float = 0.5
+
+    /// `ARConfidenceLevel.high.rawValue` — used as the assumed confidence
+    /// when a frame's `confidenceMap` is missing entirely (rather than
+    /// merely low-confidence at a given pixel), matching the choice already
+    /// shipping in `ARPointCloudSession.swift`, and as the divisor that
+    /// normalizes a raw confidence sample to the 0...1 range used
+    /// everywhere else in this file.
+    static let maximumConfidenceRawLevel: Int = 2 // ARConfidenceLevel.high
+
+    /// Normalizes a raw `ARConfidenceLevel`-scale sample (0...2) to the
+    /// 0...1 range `minimumNormalizedConfidence` and the rest of the
+    /// pipeline compare against.
+    static func normalizedConfidence(fromRaw raw: Float) -> Float {
+        raw / Float(maximumConfidenceRawLevel)
+    }
+
+    /// Depth-validity predicate built from `validDepthRangeMeters` above —
+    /// centralized here so every call site checks the same range the same
+    /// way, rather than re-deriving `isFinite && range.contains(...)`
+    /// independently at each of Pro Scan's two capture pipelines.
+    static func isDepthValid(_ depth: Float) -> Bool {
+        depth.isFinite && validDepthRangeMeters.contains(depth)
+    }
+
+    /// Confidence-acceptance predicate built from `minimumNormalizedConfidence`.
+    static func isConfidenceAcceptable(_ normalizedConfidence: Float) -> Bool {
+        normalizedConfidence.isFinite && normalizedConfidence >= minimumNormalizedConfidence
+    }
+
+    // MARK: - Spatial deduplication
+
+    /// Voxel edge length used to snap nearby samples together before
+    /// they're treated as the same physical point. Matches the value
+    /// already shipping in `PointCloudStore.swift` — centralized here so
+    /// the voxel accumulator introduced in a later phase uses the same
+    /// constant instead of a second hardcoded copy that could silently
+    /// drift from this one.
+    static let voxelSizeMeters: Float = 0.02
+
+    // MARK: - Motion gating
+
+    /// Frames where the camera's angular velocity exceeds this threshold
+    /// should be dropped rather than accumulated: fast rotation between two
+    /// frames means the depth/mesh sample is more likely to reflect motion
+    /// blur than real geometry. This number is an engineering placeholder —
+    /// ARKit does not publish a validated threshold for this — and must be
+    /// tuned against real device recordings once the gating that consumes
+    /// it lands; treat it as a starting point, not a calibrated physical
+    /// limit.
+    static let maximumAngularVelocityRadiansPerSecond: Float = 1.0
+
+    // MARK: - Sampling cadence
+
+    /// Target rate for the raw per-frame depth pipeline (the confidence/
+    /// coverage signal only — never the export path; see
+    /// `ARPointCloudSession`'s mesh-vs-depth split). ARKit delivers frames
+    /// at up to 60 Hz; running full unprojection at that rate on the CPU is
+    /// unnecessary once the fused mesh is the actual export source, and was
+    /// identified in the Pro Scan audit as a real contributor to
+    /// delegate-queue backlog. 6 Hz keeps a confidence sample roughly every
+    /// 160 ms — frequent enough for a coverage HUD, far cheaper than 60 Hz.
+    static let depthSampleHz: Double = 6.0
+
+    /// Every Nth mesh vertex is kept when extracting an `ARMeshAnchor`'s
+    /// geometry. Matches the value already shipping in
+    /// `ARPointCloudSession.swift`.
+    static let meshVertexStride: Int = 3
+
+    /// Every Nth depth-map pixel is sampled per row/column in the raw
+    /// per-frame pipeline. Matches the value already shipping in
+    /// `ARPointCloudSession.swift`.
+    static let depthPixelStride: Int = 5
+
+    // MARK: - Session duration
+
+    /// Pro Scan has no loop closure or relocalization, so drift grows with
+    /// session length. Matches the value already shipping in
+    /// `ProScanCoordinator.swift` — centralized here rather than duplicated.
+    static let recommendedMaxDurationSeconds: Int = 40
+
+    // MARK: - Adaptive resource budget
+
+    /// Under thermal pressure, widen the mesh-vertex stride (sample fewer
+    /// vertices per chunk) rather than let CPU/GPU load keep climbing and
+    /// risk ARKit itself degrading tracking quality further.
+    /// `ProcessInfo.ThermalState` is the standard, Apple-documented signal
+    /// for this — checked once per mesh-anchor update in
+    /// `ARPointCloudSession` (a per-event cost, not a per-vertex one).
+    static func meshVertexStride(forThermalState state: ProcessInfo.ThermalState) -> Int {
+        switch state {
+        case .nominal, .fair:
+            return meshVertexStride
+        case .serious:
+            return meshVertexStride * 2
+        case .critical:
+            return meshVertexStride * 4
+        @unknown default:
+            return meshVertexStride
+        }
+    }
+
+    /// A conservative fixed ceiling on total accumulated (pre-dedup) mesh
+    /// points, above which `ARPointCloudSession` stops ingesting further
+    /// mesh updates rather than growing without bound. This is a simple
+    /// fixed budget, not a real-time memory-pressure calculation against
+    /// `os_proc_available_memory()` — an honest placeholder pending real
+    /// on-device profiling of how many points a scan can hold before the
+    /// export pipeline (which builds the whole file in memory — see the
+    /// Pro Scan audit's finding on `PLYExporter`/`LASExporter`) becomes a
+    /// problem. Treat this number as provisional.
+    static let maximumMeshPointBudget: Int = 4_000_000
+
+    static func isMeshPointBudgetExceeded(currentCount: Int) -> Bool {
+        currentCount >= maximumMeshPointBudget
+    }
+
+    // MARK: - Export precision
+
+    /// LAS X/Y/Z scale factor (ASPRS LAS 1.4 §2.4: "the corresponding X, Y,
+    /// or Z scale factor must be multiplied by the X, Y, or Z point record
+    /// value to get the actual coordinate"). 1 mm keeps the `Int32` record
+    /// value comfortably inside range for any room/building-scale scan
+    /// while representing sub-millimeter precision loss only from rounding
+    /// — LiDAR mesh vertices don't carry real sub-mm accuracy in the first
+    /// place, so this is not the limiting factor on file precision.
+    static let lasScaleFactorMeters: Double = 0.001
+
+    // MARK: - Session interruption recovery
+
+    /// After `sessionInterruptionEnded`, ARKit typically resumes tracking
+    /// in the same coordinate frame on its own, but a vanilla `ARSession`
+    /// (without an explicit `ARWorldMap` to relocalize against) gives no
+    /// hard guarantee the origin didn't shift — silently trusting the very
+    /// next frame would repeat the bug this phase fixes. Instead, once
+    /// tracking is back, require this many *consecutive* `.normal`-state
+    /// frames before treating the frame as trustworthy again. At up to 60
+    /// fps this is roughly one second — a placeholder, not a value derived
+    /// from a measured relocalization-confidence curve, since ARKit doesn't
+    /// publish one; tune against real interruption recordings before
+    /// treating it as final.
+    static let relocalizationConfirmationFrameCount: Int = 60
+
+    // MARK: - Resource guards
+
+    /// Below this much free disk space, `ProScanCoordinator` stops the
+    /// capture rather than risk a failed autosave or final export losing
+    /// the scan outright. 200 MB is a conservative placeholder sized for a
+    /// worst-case in-memory PLY+LAS pair of a large scan (see
+    /// `ProScanConfig.maximumMeshPointBudget`), not a measured minimum.
+    static let minimumFreeDiskSpaceBytes: Int64 = 200 * 1024 * 1024
+
+    /// Below this battery fraction (0...1), *while unplugged*, the capture
+    /// stops rather than risk the device dying mid-scan with unsaved work.
+    /// Ignored while charging/full, since battery drain isn't a
+    /// scan-continuity risk in that case. A conservative placeholder, not
+    /// a measured "how much battery does one more minute of Pro Scan cost"
+    /// figure.
+    static let minimumBatteryLevelWhileUnplugged: Float = 0.10
+
+    /// `.critical` thermal state is ARKit/iOS's own strongest signal that
+    /// continuing to run the camera + neural engine + GPU is actively
+    /// harming device performance (and, per Apple's guidance, tracking
+    /// quality degrades further under sustained thermal pressure) — stop
+    /// rather than let the OS itself start throttling capture out from
+    /// under the user without warning.
+    static func shouldAbortCapture(forThermalState state: ProcessInfo.ThermalState) -> Bool {
+        state == .critical
+    }
+
+    // MARK: - Autosave
+
+    /// How often the in-progress mesh is snapshotted to disk (as PLY,
+    /// attached to the scan's existing `ScanRecord`) during a live Pro Scan
+    /// pass — the mechanism that lets a scan survive the app being killed
+    /// outright, not just backgrounded. 10 s balances "don't lose much
+    /// work" against constant background PLY-encoding/disk-write cost; a
+    /// starting point, not a value tuned against real device I/O cost.
+    static let autosaveIntervalSeconds: Double = 10.0
+
+    // MARK: - Measurement (post-capture, `Result/`)
+
+    /// Radius searched around a tapped point to fit a local plane for
+    /// "snap to plane" — wide enough to average out per-point noise, narrow
+    /// enough to stay local to one real surface rather than blending two
+    /// adjacent ones. Deliberately coarser than `voxelSizeMeters` (that one
+    /// dedupes near-duplicate samples of the *same* point; this one
+    /// characterizes the *local surface* around a point). A starting point
+    /// pending real-scan tuning, not a calibrated figure.
+    static let planeFitNeighborhoodRadiusMeters: Float = 0.05
+
+    /// Above this angular spread (the largest angle between any two normals
+    /// in the fit neighborhood, in radians — see `PlaneSnapping
+    /// .maxAngularSpread`), the neighborhood is judged "not flat enough" to
+    /// trust a single plane, and the raw tapped point is used instead of a
+    /// plane-projected one. ~15°, converted to radians — a conservative
+    /// placeholder; the honest failure mode here is falling back to the
+    /// (already-correct-by-construction) raw point, not fabricating a plane
+    /// that isn't really there.
+    static let maximumPlanarAngularSpreadRadians: Float = 15 * .pi / 180
+
+    /// Minimum neighbor count for a plane fit to be trusted at all — a
+    /// "plane" fit from only 1-2 points is really just noise wearing a
+    /// normal vector; below this, fall back to the raw point.
+    static let minimumPlaneFitNeighborCount: Int = 6
+
+    /// Maximum perpendicular distance, in meters, from a tap's projected
+    /// 3D ray to the nearest point cloud sample for a raycast hit to count
+    /// at all — beyond this, the tap is treated as having missed the scan
+    /// entirely. Scaled to typical LiDAR sample spacing at a few meters'
+    /// range, not a measured "how precise is a fingertip tap" figure.
+    static let raycastMaxPerpendicularDistanceMeters: Float = 0.05
+
+    /// Voxel size used only by the post-capture coverage/"holes" estimate
+    /// in the QA panel — deliberately coarser than `voxelSizeMeters` (that
+    /// one dedupes near-duplicate point observations; this one asks "is
+    /// there roughly *any* data in this neighborhood at all", a much
+    /// looser question). A starting point for what "coverage" means
+    /// visually, not a calibrated resolution.
+    static let coverageVoxelSizeMeters: Float = 0.10
+
+    /// A scan running longer than this, `ResultView`'s QA panel flags an
+    /// elevated drift-risk warning — matches `recommendedMaxDurationSeconds`
+    /// (the same threshold already shown live during capture), surfaced
+    /// again after the fact since a scan can be reviewed long after it was
+    /// captured, when the in-capture banner is long gone.
+    static func isDriftRiskElevated(durationSeconds: Int) -> Bool {
+        durationSeconds > recommendedMaxDurationSeconds
+    }
+}

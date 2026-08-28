@@ -25,8 +25,15 @@ struct PointCloudExportMetadata {
 /// captured alongside it (used as the PLY "confidence" property and, where
 /// useful, mapped into LAS classification/intensity), and the real camera
 /// color sampled at that pixel.
+///
+/// `normal` and `classification` default to "no real data" values (`+Y up`,
+/// `.none`) rather than being required, so the pre-Fase-3 construction
+/// sites that don't supply them — `PLYPointCloudReader`, reading files
+/// written before these fields existed — keep compiling unchanged.
 struct PointCloudExportPoint {
     var position: SIMD3<Float>
     var confidence: Float
     var color: SIMD3<Float> = SIMD3<Float>(0.5, 0.5, 0.5)
+    var normal: SIMD3<Float> = SIMD3<Float>(0, 1, 0)
+    var classification: PointCloudMeshClassification = .none
 }
