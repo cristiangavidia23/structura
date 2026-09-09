@@ -189,6 +189,18 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
     private var lastMetricsPublishAt: TimeInterval = 0
     private static let metricsPublishIntervalSeconds: TimeInterval = 1.0
 
+    /// Fase 2 of the architecture audit, finding E1 — see
+    /// `AngularVelocityGate`'s doc comment for why this is a different,
+    /// additional check from `FrameGate.isTrackingReliable`, not a
+    /// replacement for it. Evaluated once per `didUpdate frame:` call (see
+    /// `recordDelegateFrameMetrics`'s neighbor `updateAngularVelocityGate`),
+    /// so both `processFrame` and `updateMeshAnchors` — which react to the
+    /// same delivered frame, just via different delegate callbacks — gate
+    /// on one consistent verdict instead of each keeping (and disagreeing
+    /// about) its own frame-to-frame comparison.
+    private var angularVelocityGate = AngularVelocityGate()
+    private var isCurrentFrameMotionAcceptable = true
+
     /// The fused, deduplicated point set to export or visualize.
     ///
     /// - Parameter authoritative: when `false` (the default, and what the
@@ -323,6 +335,8 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
         relocalizationConfirmation.reset()
         delegateFrameMetrics.reset()
         lastMetricsPublishAt = 0
+        angularVelocityGate.reset()
+        isCurrentFrameMotionAcceptable = true
     }
 
     /// A frame's color image and camera parameters, copied out of a live
@@ -419,7 +433,7 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
     /// depends on. Normals transform by the anchor's rotation only (a `w`
     /// component of `0`, not `1`, in the homogeneous multiply below) —
     /// translation doesn't apply to a direction.
-    private func processMeshAnchor(_ anchor: ARMeshAnchor, frame: MeshFrameSnapshot) {
+    private func processMeshAnchor(_ anchor: ARMeshAnchor, frame: MeshFrameSnapshot, thermalState: ProcessInfo.ThermalState) {
         // Fase 0 instrumentation: this runs on `meshProcessingQueue`, off
         // ARKit's own delegate queue since Fase 1 — the signpost interval
         // is what lets a real-device profile confirm this chunk's own
@@ -455,7 +469,15 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
 
         // Widens under thermal pressure rather than holding a fixed rate
         // regardless of device load — see `ProScanConfig.meshVertexStride`.
-        let vertexSampleStride = ProScanConfig.meshVertexStride(forThermalState: ProcessInfo.processInfo.thermalState)
+        // `thermalState` is read once per anchor-update *batch* by the
+        // caller (Fase 2, finding C8), not re-read here per anchor: within
+        // one `didAdd`/`didUpdate` batch — commonly several anchors at
+        // once as ARKit re-triangulates a region — thermal state cannot
+        // meaningfully change between the first anchor processed and the
+        // last, so reading `ProcessInfo.processInfo.thermalState` (a
+        // cross-process call) once per batch rather than once per anchor is
+        // free correctness, not an approximation.
+        let vertexSampleStride = ProScanConfig.meshVertexStride(forThermalState: thermalState)
         let sampledVertexIndices = Swift.stride(from: 0, to: vertexCount, by: vertexSampleStride).map { $0 }
         let sampledVertexIndexSet = Set(sampledVertexIndices)
 
@@ -658,6 +680,10 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
         // to accumulate until sustained tracking has confirmed the
         // coordinate frame survived a recent interruption intact.
         guard !isCoordinateFrameBroken else { return }
+        // Fase 2, finding E1: a frame captured mid-fast-rotation is more
+        // likely to be motion-blurred even when ARKit's own tracking-state
+        // label still reads as reliable — see `AngularVelocityGate`.
+        guard isCurrentFrameMotionAcceptable else { return }
 
         // Temporally filtered depth is noticeably less noisy per-point than
         // the raw current-frame depth — doesn't fix session-level tracking
@@ -843,6 +869,15 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
 extension ARPointCloudSession: ARSessionDelegate {
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
         recordDelegateFrameMetrics(for: frame)
+        // Evaluated once per delivered frame, unconditionally — both
+        // `processFrame` below and `updateMeshAnchors` (reacting to
+        // `didAdd`/`didUpdate` anchors for this same frame) read the result
+        // via `isCurrentFrameMotionAcceptable` rather than each maintaining
+        // their own `AngularVelocityGate` state, which would let the two
+        // pipelines disagree about the same frame.
+        isCurrentFrameMotionAcceptable = angularVelocityGate.isMotionAcceptable(
+            transform: frame.camera.transform, timestamp: frame.timestamp
+        )
         updateCoordinateFrameRecoveryState(for: frame.camera.trackingState)
 
         // ARKit delivers frames at up to 60 Hz; running the full depth
@@ -966,6 +1001,11 @@ extension ARPointCloudSession: ARSessionDelegate {
         // coordinate origin and sustained `.normal` tracking hasn't yet
         // confirmed it's safe again — see `isCoordinateFrameBroken`.
         guard !isCoordinateFrameBroken else { return }
+        // Fase 2, finding E1 — see `processFrame`'s identical guard and
+        // `AngularVelocityGate`'s doc comment. A mesh chunk reprojected
+        // using a motion-blurred frame's color/depth is exactly as
+        // unreliable here as a raw depth sample would be.
+        guard isCurrentFrameMotionAcceptable else { return }
         // A fixed, conservative ceiling on total accumulated points — see
         // `ProScanConfig.maximumMeshPointBudget`. Existing data is kept
         // as-is (never discarded); only *further* ingestion stops, so a
@@ -977,10 +1017,14 @@ extension ARPointCloudSession: ARSessionDelegate {
         guard !meshAnchors.isEmpty else { return }
         guard let snapshot = Self.makeMeshFrameSnapshot(from: frame) else { return }
 
+        // Fase 2, finding C8: read once for this whole batch, not once per
+        // anchor inside the loop below — see `processMeshAnchor`'s doc
+        // comment on why that's correct, not just cheaper.
+        let thermalState = ProcessInfo.processInfo.thermalState
         meshProcessingQueue.async { [weak self] in
             guard let self else { return }
             for anchor in meshAnchors {
-                self.processMeshAnchor(anchor, frame: snapshot)
+                self.processMeshAnchor(anchor, frame: snapshot, thermalState: thermalState)
             }
         }
     }

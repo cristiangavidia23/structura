@@ -73,16 +73,14 @@ final class ConfidenceGrid {
         return cells.count
     }
 
-    /// Packs a world-space position into a voxel-grid cell key, at
-    /// `ProScanConfig.voxelSizeMeters` resolution. Matches the packing
-    /// scheme already shipping in `PointCloudStore.voxelKey(for:)`: three
-    /// 20-bit signed cell coordinates packed into one `Int64` — comfortably
-    /// covers any room-scale scan (±5,000 cells ≈ ±100 m at this voxel
-    /// size) without allocating a struct key per point.
+    /// Forwards to `ProScanConfig.voxelKey(for:)` — the single source of
+    /// truth for this packing scheme since Fase 2 of the architecture audit
+    /// (finding E3: the same math used to be hand-copied here,
+    /// `VoxelAccumulator`, and `PointCloudStore`). Kept as a same-named
+    /// static method on this type, rather than switching every call site to
+    /// `ProScanConfig.voxelKey(for:)` directly, so existing callers/tests
+    /// (`ConfidenceGridTests`) don't need to change.
     static func voxelKey(for position: SIMD3<Float>) -> Int64 {
-        let x = Int64((position.x / ProScanConfig.voxelSizeMeters).rounded()) & 0x1FFFFF
-        let y = Int64((position.y / ProScanConfig.voxelSizeMeters).rounded()) & 0x1FFFFF
-        let z = Int64((position.z / ProScanConfig.voxelSizeMeters).rounded()) & 0x1FFFFF
-        return (x << 42) | (y << 21) | z
+        ProScanConfig.voxelKey(for: position)
     }
 }

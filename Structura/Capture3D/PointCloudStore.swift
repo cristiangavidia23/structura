@@ -43,9 +43,9 @@ final class PointCloudStore: ObservableObject, @unchecked Sendable {
     /// The same wall gets swept by the depth camera dozens of times as the
     /// user pans around it; without deduplication, those near-duplicate
     /// samples pile up into a smeared, noisy blob instead of a clean
-    /// surface. Each frame's points are snapped onto a coarse 3D grid, and
-    /// only the highest-confidence sample per cell is kept.
-    private let voxelSizeMeters: Float = 0.02
+    /// surface. Each frame's points are snapped onto a coarse 3D grid (at
+    /// `ProScanConfig.voxelSizeMeters` — see `voxelKey(for:)`), and only the
+    /// highest-confidence sample per cell is kept.
     private var voxelIndex: [Int64: Int] = [:]
 
     /// Throttle state for the `@Published` publish in `ingest` — see that
@@ -140,13 +140,13 @@ final class PointCloudStore: ObservableObject, @unchecked Sendable {
         return (accumulatedPositions, accumulatedConfidences, accumulatedColors)
     }
 
+    /// Forwards to `ProScanConfig.voxelKey(for:)` — the single source of
+    /// truth for this packing scheme since Fase 2 of the architecture audit
+    /// (finding E3: the same math used to be hand-copied here,
+    /// `VoxelAccumulator`, and `ConfidenceGrid`, with this file's own copy
+    /// using a locally-declared `voxelSizeMeters` that happened to match
+    /// `ProScanConfig.voxelSizeMeters` rather than actually referencing it).
     private func voxelKey(for position: SIMD3<Float>) -> Int64 {
-        // Packs three 20-bit signed cell coordinates into one Int64 —
-        // comfortably covers any room-scale scan (±5,000 cells ≈ ±100m at
-        // this voxel size) without allocating a struct key per point.
-        let x = Int64((position.x / voxelSizeMeters).rounded()) & 0x1FFFFF
-        let y = Int64((position.y / voxelSizeMeters).rounded()) & 0x1FFFFF
-        let z = Int64((position.z / voxelSizeMeters).rounded()) & 0x1FFFFF
-        return (x << 42) | (y << 21) | z
+        ProScanConfig.voxelKey(for: position)
     }
 }

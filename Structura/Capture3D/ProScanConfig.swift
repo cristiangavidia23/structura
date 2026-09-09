@@ -1,4 +1,5 @@
 import Foundation
+import simd
 
 /// Single source of truth for every physical/numeric constant the Pro Scan
 /// pipeline depends on. Each value below documents where it comes from — a
@@ -78,6 +79,27 @@ enum ProScanConfig {
     /// constant instead of a second hardcoded copy that could silently
     /// drift from this one.
     static let voxelSizeMeters: Float = 0.02
+
+    /// The single source of truth for turning a world-space position into a
+    /// voxel-grid cell key, at `voxelSizeMeters` resolution — three 21-bit
+    /// signed cell coordinates packed into one `Int64` (comfortably covers
+    /// any room-scale scan: ±5,000 cells ≈ ±100 m at this voxel size,
+    /// without allocating a struct key per point).
+    ///
+    /// Fase 2 of the architecture audit (finding E3): the exact same
+    /// packing scheme used to be hand-copied in three places
+    /// (`VoxelAccumulator.voxelKey(for:)`, `ConfidenceGrid.voxelKey(for:)`,
+    /// `PointCloudStore.voxelKey(for:)`) — correct today, but a change to
+    /// the scheme in only one of them would silently desynchronize how the
+    /// mesh accumulator, the confidence grid, and the raw-depth accumulator
+    /// bucket the same physical space. All three now forward to this
+    /// function instead of keeping their own copy.
+    static func voxelKey(for position: SIMD3<Float>) -> Int64 {
+        let x = Int64((position.x / voxelSizeMeters).rounded()) & 0x1FFFFF
+        let y = Int64((position.y / voxelSizeMeters).rounded()) & 0x1FFFFF
+        let z = Int64((position.z / voxelSizeMeters).rounded()) & 0x1FFFFF
+        return (x << 42) | (y << 21) | z
+    }
 
     // MARK: - Motion gating
 

@@ -171,7 +171,16 @@ final class ProScanCoordinator: ObservableObject {
         // needs (a real contributor to delegate-queue backlog on large
         // scans, per the Pro Scan audit).
         meshCountTimer?.invalidate()
-        meshCountTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+        // Fase 2, finding C8: `Timer.scheduledTimer` schedules on the
+        // current run loop in `.default` mode, which the run loop stops
+        // servicing while it's tracking an interactive UI event (a drag,
+        // e.g. a swipe near the capture controls) — the HUD's once-a-second
+        // point count/elapsed-time/resource-guard tick would silently pause
+        // for however long that gesture lasts. `.common` is the mode Apple
+        // documents for exactly this — a timer that must keep firing
+        // through UI tracking — and matches what `PerformanceMonitor`
+        // already does for its own `CADisplayLink`.
+        let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
             guard let self else { return }
             let count = self.arSession.currentMeshPointCount()
             Task { @MainActor in
@@ -180,6 +189,8 @@ final class ProScanCoordinator: ObservableObject {
                 self.checkResourceGuards()
             }
         }
+        RunLoop.main.add(timer, forMode: .common)
+        meshCountTimer = timer
     }
 
     func stop() {
