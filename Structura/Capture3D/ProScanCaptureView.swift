@@ -208,7 +208,13 @@ struct ProScanCaptureView: View {
         // ARKit's fused mesh reconstruction, not the raw per-frame depth
         // that only drives the live heatmap overlay — meaningfully more
         // stable since it's built by integrating many frames over time.
-        let exportPoints = proScan.currentMeshPoints()
+        // `authoritative:` rebuilds the fused set from every stored sample
+        // rather than reading the incrementally-maintained one. It costs
+        // O(points) — paid once, here, where the file the user keeps is
+        // being written — and guarantees the export carries no
+        // floating-point residue from the capture's record/remove cycles.
+        // The autosave below deliberately does *not* pass it.
+        let exportPoints = proScan.currentMeshPoints(authoritative: true)
         let directory = store.scansDirectory
         let baseName = "\(record.id.uuidString)_pointcloud"
 

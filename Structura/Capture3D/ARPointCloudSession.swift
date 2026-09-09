@@ -66,6 +66,23 @@ final class ARPointCloudSession: NSObject {
     /// does.
     private var meshPointsByAnchor: [UUID: [VoxelAccumulator.Sample]] = [:]
 
+    /// The fused point set, maintained **incrementally** alongside
+    /// `meshPointsByAnchor` under the same `meshLock` — every mutation of
+    /// one is a matching mutation of the other, so the two can never drift
+    /// out of step.
+    ///
+    /// This replaces building a throwaway `VoxelAccumulator` from every
+    /// stored sample on each call to `currentMeshPoints()`. That rebuild
+    /// was O(points-in-the-entire-scan), it ran on the main actor every
+    /// autosave (`ProScanCaptureView.startAutosaveLoop`), and it held
+    /// `meshLock` throughout — blocking the mesh pipeline behind it. It was
+    /// finding C1 of the architecture audit, and the single largest source
+    /// of the frame backlog that shows up as a mesh that freezes or breaks
+    /// into islands. Now a re-triangulated chunk costs only its own
+    /// vertices: withdraw the anchor's previous samples, record its new
+    /// ones (see `VoxelAccumulator.remove(_:)`).
+    private let fusedAccumulator = VoxelAccumulator()
+
     /// Kept in lockstep with `meshPointsByAnchor` (every mutation below
     /// updates both under the same lock) so the coordinator's once-a-second
     /// HUD poll doesn't have to copy every point in the scan just to count
@@ -88,16 +105,26 @@ final class ARPointCloudSession: NSObject {
     /// callbacks, so no lock is needed.
     private var lastProcessedFrameTimestamp: TimeInterval?
 
-    func currentMeshPoints() -> [PointCloudExportPoint] {
+    /// The fused, deduplicated point set to export or visualize.
+    ///
+    /// - Parameter authoritative: when `false` (the default, and what the
+    ///   autosave path uses), reads the incrementally-maintained
+    ///   accumulator — O(voxels), no rebuild. When `true`, rebuilds from
+    ///   every stored sample first, which costs O(points) but carries no
+    ///   floating-point residue from a capture's worth of record/remove
+    ///   cycles. Pay that once, at the final export; never on a timer.
+    func currentMeshPoints(authoritative: Bool = false) -> [PointCloudExportPoint] {
         meshLock.lock()
-        let samples = meshPointsByAnchor.values.flatMap { $0 }
+        let fused: [VoxelAccumulator.Sample]
+        if authoritative {
+            let rebuilt = VoxelAccumulator.rebuilt(from: meshPointsByAnchor.values.joined())
+            fused = rebuilt.fusedSamples()
+        } else {
+            fused = fusedAccumulator.fusedSamples()
+        }
         meshLock.unlock()
 
-        let accumulator = VoxelAccumulator()
-        for sample in samples {
-            accumulator.record(sample)
-        }
-        return accumulator.fusedSamples().map { sample in
+        return fused.map { sample in
             PointCloudExportPoint(
                 position: sample.position,
                 confidence: sample.confidence,
@@ -180,6 +207,7 @@ final class ARPointCloudSession: NSObject {
     private func resetPipelineState() {
         meshLock.lock()
         meshPointsByAnchor.removeAll(keepingCapacity: false)
+        fusedAccumulator.reset()
         meshPointCountTotal = 0
         meshLock.unlock()
         confidenceGrid.reset()
@@ -316,10 +344,19 @@ final class ARPointCloudSession: NSObject {
             ))
         }
 
+        // Per-anchor storage and the fused accumulator are updated together
+        // under one lock: withdraw this anchor's previous contribution,
+        // then record the new one. ARKit re-triangulates a chunk
+        // repeatedly, so without the withdrawal an earlier version of the
+        // same chunk would keep voting in the fused result forever.
         meshLock.lock()
-        let previousCount = meshPointsByAnchor[anchor.identifier]?.count ?? 0
+        let previous = meshPointsByAnchor[anchor.identifier]
+        if let previous {
+            fusedAccumulator.remove(contentsOf: previous)
+        }
+        fusedAccumulator.record(contentsOf: samples)
         meshPointsByAnchor[anchor.identifier] = samples
-        meshPointCountTotal += samples.count - previousCount
+        meshPointCountTotal += samples.count - (previous?.count ?? 0)
         meshLock.unlock()
     }
 
@@ -635,6 +672,7 @@ extension ARPointCloudSession: ARSessionDelegate {
         meshLock.lock()
         for anchor in anchors {
             if let removed = meshPointsByAnchor.removeValue(forKey: anchor.identifier) {
+                fusedAccumulator.remove(contentsOf: removed)
                 meshPointCountTotal -= removed.count
             }
         }

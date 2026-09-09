@@ -128,6 +128,157 @@ final class VoxelAccumulatorTests: XCTestCase {
         XCTAssertTrue(accumulator.fusedSamples().isEmpty)
     }
 
+    // MARK: - Incremental withdrawal (Fase 1: audit findings C1/C2)
+
+    func testRemoveExactlyCancelsRecord() throws {
+        // A voxel observed three times, one of which is then withdrawn,
+        // must be indistinguishable from that voxel having been observed
+        // by the other two all along.
+        let position = SIMD3<Float>(1, 2, 3)
+        let keep = [sample(position, confidence: 0.4), sample(position, confidence: 0.8)]
+        let withdrawn = sample(position, confidence: 0.2, color: SIMD3(1, 0, 0), normal: SIMD3(1, 0, 0))
+
+        let incremental = VoxelAccumulator()
+        incremental.record(contentsOf: keep)
+        incremental.record(withdrawn)
+        incremental.remove(withdrawn)
+
+        let baseline = VoxelAccumulator()
+        baseline.record(contentsOf: keep)
+
+        let a = try XCTUnwrap(incremental.fusedSamples().first)
+        let b = try XCTUnwrap(baseline.fusedSamples().first)
+        XCTAssertEqual(a.confidence, b.confidence, accuracy: 0.0001)
+        XCTAssertEqual(a.position.x, b.position.x, accuracy: 0.0001)
+        XCTAssertEqual(a.color.x, b.color.x, accuracy: 0.0001)
+        XCTAssertEqual(a.normal.x, b.normal.x, accuracy: 0.0001)
+    }
+
+    func testRemovingTheLastObservationDropsTheVoxelEntirely() {
+        // An emptied region must reset exactly, not linger as a cell full
+        // of near-cancelled sums that a later observation would average
+        // against.
+        let accumulator = VoxelAccumulator()
+        let only = sample(SIMD3(4, 4, 4), confidence: 0.7)
+        accumulator.record(only)
+        XCTAssertEqual(accumulator.observedVoxelCount, 1)
+
+        accumulator.remove(only)
+
+        XCTAssertEqual(accumulator.observedVoxelCount, 0)
+        XCTAssertTrue(accumulator.fusedSamples().isEmpty)
+    }
+
+    func testRemovingAnUnrecordedSampleIsHarmless() {
+        let accumulator = VoxelAccumulator()
+        accumulator.record(sample(SIMD3(0, 0, 0), confidence: 0.5))
+        // A voxel that was never observed at all.
+        accumulator.remove(sample(SIMD3(50, 50, 50), confidence: 0.5))
+        XCTAssertEqual(accumulator.observedVoxelCount, 1)
+    }
+
+    func testRetriangulatedAnchorReplacesItsOwnContributionOnly() throws {
+        // The exact scenario the incremental accumulator exists for: two
+        // anchors overlap in one voxel; anchor A is re-triangulated, so its
+        // old samples are withdrawn and its new ones recorded. Anchor B's
+        // contribution must survive untouched, and the result must match a
+        // fresh accumulator built from (A-new + B).
+        let shared = SIMD3<Float>(2, 0, 0)
+        let anchorBSamples = [sample(shared, confidence: 0.6, classification: 1)]
+        let anchorAOld = [sample(shared, confidence: 0.2, classification: 2), sample(SIMD3(9, 9, 9), confidence: 0.2)]
+        let anchorANew = [sample(shared, confidence: 0.9, classification: 1)]
+
+        let incremental = VoxelAccumulator()
+        incremental.record(contentsOf: anchorBSamples)
+        incremental.record(contentsOf: anchorAOld)
+        incremental.remove(contentsOf: anchorAOld)
+        incremental.record(contentsOf: anchorANew)
+
+        let expected = VoxelAccumulator.rebuilt(from: anchorBSamples + anchorANew)
+
+        XCTAssertEqual(incremental.observedVoxelCount, expected.observedVoxelCount,
+                       "The stale chunk's isolated voxel must be gone, not stranded.")
+        let a = try XCTUnwrap(incremental.fusedSamples().first)
+        let b = try XCTUnwrap(expected.fusedSamples().first)
+        XCTAssertEqual(a.confidence, b.confidence, accuracy: 0.0001)
+        XCTAssertEqual(a.classificationRawValue, b.classificationRawValue)
+    }
+
+    func testClassificationVotesAreWithdrawnToo() throws {
+        // Two "floor" votes and one "wall"; withdraw one floor and the
+        // majority must flip to the tie-break winner, not stay stale.
+        let position = SIMD3<Float>(7, 7, 7)
+        let accumulator = VoxelAccumulator()
+        let floorA = sample(position, confidence: 0.5, classification: 2)
+        accumulator.record(floorA)
+        accumulator.record(sample(position, confidence: 0.5, classification: 2))
+        accumulator.record(sample(position, confidence: 0.5, classification: 1))
+        XCTAssertEqual(try XCTUnwrap(accumulator.fusedSamples().first).classificationRawValue, 2)
+
+        accumulator.remove(floorA)
+
+        // Now tied 1-1 — the tie-break rule picks the lowest raw value.
+        XCTAssertEqual(try XCTUnwrap(accumulator.fusedSamples().first).classificationRawValue, 1)
+    }
+
+    func testUnknownClassificationByteIsNotCounted() throws {
+        // A raw value outside ARKit's eight cases must not be tallied at
+        // all — it should not silently win, nor be folded into `.none`.
+        let position = SIMD3<Float>(8, 8, 8)
+        let accumulator = VoxelAccumulator()
+        accumulator.record(sample(position, confidence: 0.5, classification: 200))
+        accumulator.record(sample(position, confidence: 0.5, classification: 200))
+        accumulator.record(sample(position, confidence: 0.5, classification: 3)) // ceiling
+
+        let fused = try XCTUnwrap(accumulator.fusedSamples().first)
+        XCTAssertEqual(fused.classificationRawValue, 3, "The only valid vote must win over two unrecognized bytes.")
+    }
+
+    func testFusedSamplesAreOrderedDeterministically() {
+        // Two accumulators fed the same voxels in opposite order must emit
+        // the same sequence — `Dictionary` iteration order is not stable,
+        // and an export whose point order shifts between identical scans is
+        // needlessly hard to diff.
+        let positions = [SIMD3<Float>(3, 0, 0), SIMD3<Float>(0, 0, 0), SIMD3<Float>(-2, 1, 4), SIMD3<Float>(1, 1, 1)]
+
+        let forward = VoxelAccumulator()
+        forward.record(contentsOf: positions.map { sample($0, confidence: 0.5) })
+        let backward = VoxelAccumulator()
+        backward.record(contentsOf: positions.reversed().map { sample($0, confidence: 0.5) })
+
+        XCTAssertEqual(forward.fusedSamples().map(\.position.x), backward.fusedSamples().map(\.position.x))
+    }
+
+    func testIncrementalResultMatchesAFullRebuild() throws {
+        // The autosave path reads the incremental accumulator; the final
+        // export rebuilds. On a scan with overlap and one re-triangulation,
+        // the two must agree within float tolerance — otherwise the file
+        // the user keeps would differ from what they watched being built.
+        var chunkOne: [VoxelAccumulator.Sample] = []
+        var chunkTwo: [VoxelAccumulator.Sample] = []
+        for i in 0..<200 {
+            let x = Float(i) * 0.03
+            chunkOne.append(sample(SIMD3(x, 0, 0), confidence: 0.4, classification: 1))
+            chunkTwo.append(sample(SIMD3(x + 0.004, 0, 0), confidence: 0.9, classification: 1))
+        }
+
+        let incremental = VoxelAccumulator()
+        incremental.record(contentsOf: chunkOne)
+        incremental.record(contentsOf: chunkTwo)
+        incremental.remove(contentsOf: chunkTwo)
+        incremental.record(contentsOf: chunkTwo)
+
+        let rebuilt = VoxelAccumulator.rebuilt(from: chunkOne + chunkTwo)
+
+        let a = incremental.fusedSamples()
+        let b = rebuilt.fusedSamples()
+        XCTAssertEqual(a.count, b.count)
+        for (lhs, rhs) in zip(a, b) {
+            XCTAssertEqual(lhs.position.x, rhs.position.x, accuracy: 0.001)
+            XCTAssertEqual(lhs.confidence, rhs.confidence, accuracy: 0.001)
+        }
+    }
+
     // MARK: - Voxel hashing (shared packing scheme)
 
     func testVoxelKeyGroupsPositionsWithinTheSameCell() {

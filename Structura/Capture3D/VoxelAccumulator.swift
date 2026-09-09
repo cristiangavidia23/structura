@@ -20,16 +20,38 @@ import simd
 /// per-*face* classification to individual *vertices*, before any of this
 /// voxel fusion happens).
 ///
+/// # Incremental use (Fase 1 of the architecture audit)
+///
+/// Every quantity a `Cell` holds is a running *sum*, so an observation can
+/// be withdrawn as exactly as it was added — that is what `remove(_:)`
+/// does. This is what lets `ARPointCloudSession` keep **one long-lived
+/// accumulator** across a whole capture instead of rebuilding a fresh one
+/// from every stored sample on each call: when ARKit re-triangulates a
+/// chunk, the session withdraws that anchor's previous samples and records
+/// its new ones, an O(vertices-in-that-chunk) operation, rather than an
+/// O(points-in-the-entire-scan) rebuild on the main thread (audit finding
+/// C1). A cell whose last observation is withdrawn is dropped outright, so
+/// an emptied region resets exactly rather than lingering as accumulated
+/// floating-point residue.
+///
+/// Repeated record/remove cycles do accrue floating-point drift in the
+/// running sums, bounded by the magnitudes involved (positions in meters,
+/// weights in 0…1) and by cells being dropped at zero. Where an
+/// authoritative result matters more than the cost — the final export, not
+/// a 10-second autosave — `rebuilt(from:)` produces a fresh accumulator
+/// with no accumulated residue at all.
+///
 /// Coordinate systems: positions/normals here are assumed to already be in
 /// ARKit world space (right-handed, +Y up) — the same convention
 /// `ProScanConfig` and `CameraUnprojection` document; this type performs no
 /// coordinate conversion of its own.
 ///
-/// Not an `actor`, for the same reason as `ConfidenceGrid`: every call site
-/// in this phase is synchronous, single-threaded use (either entirely
-/// within `ARPointCloudSession`'s serial `processingQueue`, or a one-shot
-/// call at export time) — an actor would add `Task`/`await` boundaries
-/// with no concurrency benefit here.
+/// Not an `actor`: call sites are synchronous, single-threaded use (either
+/// entirely within `ARPointCloudSession`'s mesh-processing queue, or a
+/// one-shot call at export time) — an actor would add `Task`/`await`
+/// boundaries with no concurrency benefit here. The session guards it with
+/// the same lock that guards its per-anchor sample storage, since the two
+/// must be mutated together to stay consistent.
 ///
 /// Pure Swift/simd, no ARKit dependency — like `ProScanConfig`,
 /// `CameraUnprojection`, and `ConfidenceGrid` — so it compiles into the
@@ -52,14 +74,28 @@ final class VoxelAccumulator {
         var classificationRawValue: UInt8
     }
 
+    /// `PointCloudMeshClassification` has exactly eight cases (`none`
+    /// through `door`), mirroring ARKit's `ARMeshClassification`. Fixing the
+    /// tally at eight lanes is what keeps `Cell` a flat value type.
+    static let classificationCount = 8
+
+    /// Every field is a running sum, which is what makes `remove(_:)`
+    /// exact rather than approximate.
+    ///
+    /// `classificationVotes` is a fixed `SIMD8<Int32>`, not a
+    /// `[UInt8: Int]`. The dictionary version cost one heap allocation per
+    /// occupied voxel — hundreds of thousands of tiny dictionaries on a
+    /// real scan, rebuilt in full on every export/autosave call (audit
+    /// finding C2). Eight lanes cover every classification ARKit emits, so
+    /// the tally now lives inline in the cell with no allocation at all.
     private struct Cell {
         var weightedPositionSum: SIMD3<Float> = .zero
         var weightedColorSum: SIMD3<Float> = .zero
         var weightedNormalSum: SIMD3<Float> = .zero
         var confidenceSum: Float = 0
         var weightSum: Float = 0
-        var observationCount: Int = 0
-        var classificationVotes: [UInt8: Int] = [:]
+        var observationCount: Int32 = 0
+        var classificationVotes: SIMD8<Int32> = .zero
     }
 
     private var cells: [Int64: Cell] = [:]
@@ -72,28 +108,91 @@ final class VoxelAccumulator {
     /// exactly the count `fusedSamples()` will return.
     var observedVoxelCount: Int { cells.count }
 
+    /// Weight used for position/color/normal averaging. Clamped to a small
+    /// positive floor so a zero-confidence duplicate can never be given
+    /// zero influence over the fused values; the *reported* fused
+    /// confidence still uses the sample's real, unclamped value.
+    ///
+    /// `record` and `remove` must derive the weight identically, or a
+    /// withdrawal would not cancel its own contribution — hence the single
+    /// shared definition here rather than the expression inlined twice.
+    private static func weight(for sample: Sample) -> Float {
+        max(sample.confidence, 0.0001)
+    }
+
     /// Folds one observed sample into its voxel's running weighted average.
-    /// Confidence is clamped to a small positive floor for weighting
-    /// purposes only (so a same-position duplicate can never be given zero
-    /// influence over the fused position/color/normal); the *reported*
-    /// fused confidence still uses the sample's real, unclamped value.
     func record(_ sample: Sample) {
         let key = Self.voxelKey(for: sample.position)
+        let weight = Self.weight(for: sample)
         var cell = cells[key] ?? Cell()
-        let weight = max(sample.confidence, 0.0001)
         cell.weightedPositionSum += sample.position * weight
         cell.weightedColorSum += sample.color * weight
         cell.weightedNormalSum += sample.normal * weight
         cell.confidenceSum += sample.confidence
         cell.weightSum += weight
         cell.observationCount += 1
-        cell.classificationVotes[sample.classificationRawValue, default: 0] += 1
+        if let lane = Self.voteLane(for: sample.classificationRawValue) {
+            cell.classificationVotes[lane] += 1
+        }
         cells[key] = cell
     }
 
+    /// Withdraws a previously recorded sample, exactly cancelling the
+    /// contribution `record(_:)` made for it. Passing a sample that was
+    /// never recorded (or recording it twice and removing it once too
+    /// often) is a caller bug: the cell's observation count would go
+    /// negative, so it is dropped instead, which is the conservative
+    /// outcome — a lost voxel rather than a corrupt one.
+    ///
+    /// This is what makes an anchor's re-triangulation cheap: withdraw the
+    /// chunk's previous vertices, record its new ones, and the fused set
+    /// stays correct without touching any other anchor's points.
+    func remove(_ sample: Sample) {
+        let key = Self.voxelKey(for: sample.position)
+        guard var cell = cells[key] else { return }
+
+        let weight = Self.weight(for: sample)
+        cell.weightedPositionSum -= sample.position * weight
+        cell.weightedColorSum -= sample.color * weight
+        cell.weightedNormalSum -= sample.normal * weight
+        cell.confidenceSum -= sample.confidence
+        cell.weightSum -= weight
+        cell.observationCount -= 1
+        if let lane = Self.voteLane(for: sample.classificationRawValue) {
+            cell.classificationVotes[lane] = max(cell.classificationVotes[lane] - 1, 0)
+        }
+
+        // Dropping the cell at zero keeps an emptied region exactly empty,
+        // rather than leaving a residue of near-cancelled sums behind that
+        // a later observation would then be averaged against.
+        if cell.observationCount <= 0 || cell.weightSum <= 0 {
+            cells.removeValue(forKey: key)
+        } else {
+            cells[key] = cell
+        }
+    }
+
+    /// Records every sample in a sequence. Convenience for the session's
+    /// per-anchor ingestion, which always deals in whole chunks.
+    func record<S: Sequence>(contentsOf samples: S) where S.Element == Sample {
+        for sample in samples { record(sample) }
+    }
+
+    /// Withdraws every sample in a sequence — the counterpart used when an
+    /// anchor is re-triangulated or removed.
+    func remove<S: Sequence>(contentsOf samples: S) where S.Element == Sample {
+        for sample in samples { remove(sample) }
+    }
+
     /// One fused representative sample per observed voxel.
+    ///
+    /// Sorted by voxel key so the exported point order is deterministic
+    /// across runs — `Dictionary` iteration order is not stable, and an
+    /// export whose point order changes between two identical scans is
+    /// needlessly hard to diff or regression-test.
     func fusedSamples() -> [Sample] {
-        cells.values.map { cell in
+        cells.keys.sorted().map { key in
+            let cell = cells[key]!
             let position = cell.weightedPositionSum / cell.weightSum
             let color = cell.weightedColorSum / cell.weightSum
             let normalLength = simd_length(cell.weightedNormalSum)
@@ -104,29 +203,47 @@ final class VoxelAccumulator {
         }
     }
 
+    /// A fresh accumulator built from scratch out of `samples`, carrying no
+    /// floating-point residue from any record/remove history. Use at the
+    /// final export, where paying O(N) once buys an authoritative result;
+    /// not on the autosave path, which is exactly the O(N)-on-the-main-
+    /// thread cost Fase 1 removes.
+    static func rebuilt<S: Sequence>(from samples: S) -> VoxelAccumulator where S.Element == Sample {
+        let accumulator = VoxelAccumulator()
+        accumulator.record(contentsOf: samples)
+        return accumulator
+    }
+
+    /// Maps a raw classification byte to its tally lane, or `nil` for a
+    /// value outside the eight ARKit defines — an unknown byte is not
+    /// counted rather than silently folded into `.none`, so a future ARKit
+    /// case showing up here is invisible in the vote instead of being
+    /// miscounted as "no classification".
+    private static func voteLane(for rawValue: UInt8) -> Int? {
+        let lane = Int(rawValue)
+        return lane < classificationCount ? lane : nil
+    }
+
     /// Highest-vote-count classification; ties broken by lowest raw value,
-    /// for a fully deterministic result. `.none` (0) if there were no votes
-    /// at all (a voxel fed only by the raw depth pipeline, never by any
-    /// mesh vertex — not expected in practice, but handled rather than
-    /// crashing on an empty tally).
-    private static func majorityClassification(from votes: [UInt8: Int]) -> UInt8 {
-        var bestValue: UInt8 = 0
-        var bestCount = -1
-        for rawValue in votes.keys.sorted() {
-            let count = votes[rawValue]!
-            if count > bestCount {
-                bestCount = count
-                bestValue = rawValue
-            }
+    /// for a fully deterministic result (the ascending scan keeps the first
+    /// lane that reached the current maximum). `.none` (0) if there were no
+    /// votes at all — a voxel fed only by the raw depth pipeline, never by
+    /// any mesh vertex.
+    private static func majorityClassification(from votes: SIMD8<Int32>) -> UInt8 {
+        var bestValue = 0
+        var bestCount: Int32 = -1
+        for lane in 0..<classificationCount where votes[lane] > bestCount {
+            bestCount = votes[lane]
+            bestValue = lane
         }
-        return bestValue
+        return UInt8(bestValue)
     }
 
     /// Packs a world-space position into a voxel-grid cell key, at
     /// `ProScanConfig.voxelSizeMeters` resolution. Matches the packing
     /// scheme already shipping in `PointCloudStore.voxelKey(for:)` and
-    /// `ConfidenceGrid.voxelKey(for:)`: three 20-bit signed cell
-    /// coordinates packed into one `Int64`.
+    /// `ConfidenceGrid.voxelKey(for:)`: three 21-bit cell coordinates,
+    /// two's-complement, packed into one `Int64`.
     static func voxelKey(for position: SIMD3<Float>) -> Int64 {
         let x = Int64((position.x / ProScanConfig.voxelSizeMeters).rounded()) & 0x1FFFFF
         let y = Int64((position.y / ProScanConfig.voxelSizeMeters).rounded()) & 0x1FFFFF

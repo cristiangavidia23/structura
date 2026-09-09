@@ -200,8 +200,13 @@ final class ProScanCoordinator: ObservableObject {
     /// reconstruction rather than the raw per-frame depth accumulated in
     /// `pointCloudStore` (that one only drives the sampling-tick haptic and
     /// coverage-adjacent HUD signal during capture).
-    func currentMeshPoints() -> [PointCloudExportPoint] {
-        arSession.currentMeshPoints()
+    /// - Parameter authoritative: pass `true` only at the final export, to
+    ///   rebuild the fused set from scratch and shed any floating-point
+    ///   residue a capture's worth of incremental record/remove cycles left
+    ///   behind. The autosave path must leave it `false` — rebuilding on a
+    ///   timer is finding C1 of the architecture audit.
+    func currentMeshPoints(authoritative: Bool = false) -> [PointCloudExportPoint] {
+        arSession.currentMeshPoints(authoritative: authoritative)
     }
 
     private func handleTrackingState(_ state: ARCamera.TrackingState) {
