@@ -1,6 +1,8 @@
 import ARKit
 import CoreVideo
 import UIKit
+import os
+import QuartzCore
 
 /// Raw ARKit second pass ("Pro Scan"): runs only after RoomPlan's
 /// `RoomCaptureSession` has fully stopped, since ARKit allows a single
@@ -76,6 +78,16 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
     /// it — lets the UI show "reubicando…" instead of implying the scan is
     /// silently fine again the instant ARKit says `.normal`.
     var onCoordinateFrameBrokenStateChanged: ((Bool) -> Void)?
+    /// Fires at most once a second (see `metricsPublishIntervalSeconds`)
+    /// with the ARKit delivery rate / delegate latency observed since the
+    /// last publish — Fase 0 of the architecture audit: "sin línea base
+    /// todo lo demás es opinión." Never fires more often than that
+    /// regardless of ARKit's actual frame rate, on purpose — see
+    /// `delegateFrameMetrics`'s doc comment on why this call site is exactly
+    /// the same shape as `PointCloudStore`'s throttled publish (Fase 1,
+    /// finding C5): this instrumentation must not itself become a new
+    /// version of the problem Fase 1 just fixed.
+    var onPerformanceSample: ((DelegateFrameMetrics.Snapshot) -> Void)?
 
     /// Set on `sessionWasInterrupted`, cleared only after sustained
     /// `.normal` tracking post-interruption (see `didUpdate frame:`) — a
@@ -153,6 +165,30 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
     /// comment), so no lock is needed.
     private var lastProcessedFrameTimestamp: TimeInterval?
 
+    /// `os_signpost` instrumentation for the three call sites Fase 0 of the
+    /// architecture audit names explicitly: `processMeshAnchor`,
+    /// `processFrame`, and `currentMeshPoints`. Purely additive — every
+    /// interval here wraps existing work without changing it — so this can
+    /// be recorded in Instruments (Time Profiler + `os_signpost` template,
+    /// subsystem `com.structura.capture3d`) against a real device scan and
+    /// compared before/after a pipeline change, which is the actual point:
+    /// a signpost only says how long something took and how often it ran,
+    /// never why, so it complements rather than replaces the FPS/latency
+    /// numbers below.
+    private static let signposter = OSSignposter(subsystem: "com.structura.capture3d", category: "ProScanPipeline")
+
+    /// Real ARKit frame-delivery rate and delegate-callback latency — see
+    /// `DelegateFrameMetrics`'s doc comment for why these are not the same
+    /// thing `PerformanceMonitor.fps` already measures. Recorded on every
+    /// single frame in `didUpdate frame:` (O(1) arithmetic, not gated by
+    /// `processFrame`'s own throttle — the backlog this measures can exist
+    /// independently of whether this particular frame was one `processFrame`
+    /// chose to process), and published through `onPerformanceSample` at
+    /// most once a second — see that property's doc comment.
+    private var delegateFrameMetrics = DelegateFrameMetrics()
+    private var lastMetricsPublishAt: TimeInterval = 0
+    private static let metricsPublishIntervalSeconds: TimeInterval = 1.0
+
     /// The fused, deduplicated point set to export or visualize.
     ///
     /// - Parameter authoritative: when `false` (the default, and what the
@@ -162,6 +198,16 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
     ///   floating-point residue from a capture's worth of record/remove
     ///   cycles. Pay that once, at the final export; never on a timer.
     func currentMeshPoints(authoritative: Bool = false) -> [PointCloudExportPoint] {
+        // Two distinct signpost names, not one with a dynamic argument, so
+        // Instruments' timeline trivially separates the cheap O(voxels)
+        // incremental read (the autosave path, Fase 1) from the expensive
+        // O(points) authoritative rebuild (final export only) without
+        // needing to inspect each interval's payload.
+        let signpostName: StaticString = authoritative ? "currentMeshPoints.authoritative" : "currentMeshPoints.incremental"
+        let signpostID = Self.signposter.makeSignpostID()
+        let signpostState = Self.signposter.beginInterval(signpostName, id: signpostID)
+        defer { Self.signposter.endInterval(signpostName, signpostState) }
+
         meshLock.lock()
         let fused: [VoxelAccumulator.Sample]
         if authoritative {
@@ -275,6 +321,8 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
         lastProcessedFrameTimestamp = nil
         isCoordinateFrameBroken = false
         relocalizationConfirmation.reset()
+        delegateFrameMetrics.reset()
+        lastMetricsPublishAt = 0
     }
 
     /// A frame's color image and camera parameters, copied out of a live
@@ -372,6 +420,15 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
     /// component of `0`, not `1`, in the homogeneous multiply below) —
     /// translation doesn't apply to a direction.
     private func processMeshAnchor(_ anchor: ARMeshAnchor, frame: MeshFrameSnapshot) {
+        // Fase 0 instrumentation: this runs on `meshProcessingQueue`, off
+        // ARKit's own delegate queue since Fase 1 — the signpost interval
+        // is what lets a real-device profile confirm this chunk's own
+        // per-vertex cost (not just whether it's blocking frame delivery
+        // anymore, which C4's fix already addresses).
+        let signpostID = Self.signposter.makeSignpostID()
+        let signpostState = Self.signposter.beginInterval("processMeshAnchor", id: signpostID)
+        defer { Self.signposter.endInterval("processMeshAnchor", signpostState) }
+
         let lumaBytesPerRow = frame.lumaBytesPerRow
         let lumaWidth = frame.lumaWidth
         let lumaHeight = frame.lumaHeight
@@ -581,6 +638,14 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
     /// pixels (origin top-left, +Y down) — see `CameraUnprojection`'s doc
     /// comment for how the two conventions are reconciled.
     private func processFrame(_ frame: ARFrame) {
+        // Fase 0 instrumentation: this stays on `delegateQueue` by design
+        // (see this method's doc comment) — the signpost interval is what
+        // lets a real-device profile confirm that choice is still correct
+        // rather than assume it.
+        let signpostID = Self.signposter.makeSignpostID()
+        let signpostState = Self.signposter.beginInterval("processFrame", id: signpostID)
+        defer { Self.signposter.endInterval("processFrame", signpostState) }
+
         // A frame whose own pose estimate ARKit doesn't trust yet
         // (`.limited`/`.notAvailable`) would unproject every point in it
         // against an unreliable transform, indistinguishably from a good
@@ -777,6 +842,7 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
 
 extension ARPointCloudSession: ARSessionDelegate {
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
+        recordDelegateFrameMetrics(for: frame)
         updateCoordinateFrameRecoveryState(for: frame.camera.trackingState)
 
         // ARKit delivers frames at up to 60 Hz; running the full depth
@@ -796,6 +862,33 @@ extension ARPointCloudSession: ARSessionDelegate {
         // tracking-state indicator should update every frame, not just the
         // ones this pipeline actually processes.
         onTrackingState?(frame.camera.trackingState)
+    }
+
+    /// Folds this callback's arrival into `delegateFrameMetrics` and
+    /// publishes a snapshot at most once a second — Fase 0 of the
+    /// architecture audit. Runs on every single `didUpdate frame:` call,
+    /// unconditionally, unlike `processFrame` (throttled to
+    /// `ProScanConfig.depthSampleHz`): the delegate-queue backlog this
+    /// measures is a property of every frame ARKit delivers, not just the
+    /// ones the depth pipeline happens to process.
+    ///
+    /// The recording itself is two `Int`/`Double` accumulations — the same
+    /// negligible cost class as the throttle check `PointCloudStore.ingest`
+    /// already does on this queue (Fase 1, finding C5) — so doing it
+    /// unconditionally does not reintroduce the kind of per-frame cost that
+    /// phase worked to remove. The publish this throttles, not the
+    /// recording, is what would be expensive to do 60 times a second: it
+    /// hops onto the main actor for `PerformanceMonitor`'s `@Published`
+    /// properties, by the same reasoning as that same fix.
+    private func recordDelegateFrameMetrics(for frame: ARFrame) {
+        let now = CACurrentMediaTime()
+        delegateFrameMetrics.record(frameTimestamp: frame.timestamp, now: now)
+
+        guard now - lastMetricsPublishAt >= Self.metricsPublishIntervalSeconds,
+              let snapshot = delegateFrameMetrics.snapshot(now: now) else { return }
+        lastMetricsPublishAt = now
+        delegateFrameMetrics.reset()
+        onPerformanceSample?(snapshot)
     }
 
     /// Advances the post-interruption recovery state machine: once

@@ -130,6 +130,16 @@ final class ProScanCoordinator: ObservableObject {
                 self?.isCoordinateFrameBroken = isBroken
             }
         }
+        // Fase 0 of the architecture audit: already throttled to at most
+        // 1 Hz at the source (`ARPointCloudSession.metricsPublishIntervalSeconds`),
+        // so hopping to the main actor here to update `PerformanceMonitor`'s
+        // `@Published` properties is the same cost class as the
+        // `meshCountTimer` poll in `start()` below — not a per-frame cost.
+        arSession.onPerformanceSample = { [weak self] snapshot in
+            Task { @MainActor in
+                self?.performanceMonitor.reportARKitFrame(snapshot)
+            }
+        }
     }
 
     func start(viewportSize: CGSize, interfaceOrientation: UIInterfaceOrientation) {
