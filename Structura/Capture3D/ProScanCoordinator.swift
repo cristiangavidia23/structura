@@ -60,7 +60,15 @@ final class ProScanCoordinator: ObservableObject {
     static let recommendedMaxDuration = 40
 
     let performanceMonitor = PerformanceMonitor()
-    let pointCloudStore = PointCloudStore()
+
+    // `nonisolated(unsafe)`, mirroring `arSession` below: `PointCloudStore`
+    // is internally synchronized (its own `lock`) and documented
+    // `@unchecked Sendable` since Fase 1 (audit finding C5) precisely so
+    // `ingest(_:)` can be called from `arSession.onFrame` without a
+    // main-actor hop — see `init()`. This property never changes after
+    // `init`, so "unsafe" here is Swift trusting that documentation rather
+    // than being unable to prove it itself.
+    private nonisolated(unsafe) let pointCloudStore = PointCloudStore()
 
     // `nonisolated(unsafe)`: the referenced `ARPointCloudSession` is
     // internally synchronized (`meshLock`) and is documented
@@ -84,8 +92,26 @@ final class ProScanCoordinator: ObservableObject {
     init() {
         arSession.onFrame = { [weak self] frame in
             guard let self else { return }
+            // `ingest` no longer needs — or wants — a main-actor hop (Fase 1,
+            // audit finding C5): it does its own locking and only marshals
+            // its two `@Published` properties onto the main actor itself,
+            // throttled to 2 Hz, instead of forcing every throttled
+            // depth-pipeline frame's full dedup/accumulation loop onto the
+            // main actor just to reach them. Calling it directly here, from
+            // whatever queue `onFrame` fires on (`ARPointCloudSession
+            // .delegateQueue`), is what actually removes that main-actor
+            // cost — routing through `Task { @MainActor in ... }` first
+            // would have kept paying it.
+            self.pointCloudStore.ingest(frame)
+
+            // `haptics.samplingTick()` deliberately stays on the main actor.
+            // `HapticEngineManager`/`HapticFeedbackAdapter` have no
+            // synchronization of their own — safe today only because every
+            // call into them happens to originate on the main actor. Giving
+            // this one call a free ride off it would introduce a new,
+            // unrelated race for a haptic tick that costs nothing to keep
+            // where it is; that cleanup is future work, not part of C5.
             Task { @MainActor in
-                self.pointCloudStore.ingest(frame)
                 self.haptics.samplingTick()
             }
         }
