@@ -76,6 +76,7 @@ targets:
       - path: Structura/Result/PlaneSnapping.swift
       - path: Structura/Result/MeasurementCalibration.swift
       - path: Structura/Result/ScanCoverageEstimator.swift
+      - path: Structura/Result/PointCloudFloorPlanBuilder.swift
       - path: StructuraTests
     settings:
       base:
