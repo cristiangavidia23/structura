@@ -212,6 +212,44 @@ final class LASExporterTests: XCTestCase {
         XCTAssertTrue(wkt.contains("0.050"), "WKT must state the declared accuracy.")
     }
 
+    // MARK: - Intensity / confidence honesty (Fase 2, finding E2)
+
+    func testObservedConfidenceIsScaledIntoIntensity() throws {
+        let points = [PointCloudExportPoint(position: SIMD3<Float>(0, 0, 0), confidence: 0.75, isConfidenceObserved: true)]
+        let (url, data) = try writeTempLAS(points)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let offsetToPointData = Int(loadLE(data, at: 96, as: UInt32.self))
+        let intensity = loadLE(data, at: offsetToPointData + 12, as: UInt16.self)
+        XCTAssertEqual(intensity, UInt16((0.75 * 65535).rounded()))
+    }
+
+    func testUnobservedConfidenceIsWrittenAsTheSentinelNotAFabricatedValue() throws {
+        // Even though `confidence` still carries the fallback numeric value
+        // (0.5 — see `PointCloudExportPoint.isConfidenceObserved`'s doc
+        // comment), the LAS Intensity field must not encode it as if it
+        // were a real 0.5 reading.
+        let points = [PointCloudExportPoint(position: SIMD3<Float>(0, 0, 0), confidence: 0.5, isConfidenceObserved: false)]
+        let (url, data) = try writeTempLAS(points)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let offsetToPointData = Int(loadLE(data, at: 96, as: UInt32.self))
+        let intensity = loadLE(data, at: offsetToPointData + 12, as: UInt16.self)
+        XCTAssertEqual(intensity, LASExporter.unobservedConfidenceIntensity)
+        XCTAssertEqual(intensity, 0)
+    }
+
+    func testSentinelNeverCollidesWithARealObservationsIntensityRange() {
+        // Every real observation's confidence is required to be
+        // >= ProScanConfig.minimumNormalizedConfidence before it ever
+        // reaches this exporter (see ConfidenceGrid/ProScanConfig
+        // .isConfidenceAcceptable), so its Intensity can never be as low as
+        // the sentinel — this is what makes the sentinel unambiguous rather
+        // than a value that could also occur naturally.
+        let lowestPossibleRealIntensity = UInt16(clamping: Int((ProScanConfig.minimumNormalizedConfidence * 65535).rounded()))
+        XCTAssertGreaterThan(lowestPossibleRealIntensity, LASExporter.unobservedConfidenceIntensity)
+    }
+
     // MARK: - Empty input
 
     func testEmptyPointCloudThrows() {

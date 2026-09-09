@@ -72,6 +72,17 @@ final class VoxelAccumulator {
         /// (0...7) — kept as a plain byte here for the same reason as the
         /// rest of this type's ARKit/export-model independence.
         var classificationRawValue: UInt8
+        /// `false` when `confidence` above is a fallback value — no real
+        /// `ConfidenceGrid` observation existed for this vertex — rather
+        /// than a genuine depth-pipeline reading. Fase 2 of the
+        /// architecture audit, finding E2: the fallback confidence number
+        /// itself is unchanged (still needed so PLY/rendering have *some*
+        /// float to work with), but callers that must not present a
+        /// fabricated value as real data (`LASExporter`'s Intensity field)
+        /// need this flag to tell the two cases apart. Defaults to `true`
+        /// so existing construction sites/tests that never set it keep
+        /// compiling unchanged.
+        var isConfidenceObserved: Bool = true
     }
 
     /// `PointCloudMeshClassification` has exactly eight cases (`none`
@@ -96,6 +107,17 @@ final class VoxelAccumulator {
         var weightSum: Float = 0
         var observationCount: Int32 = 0
         var classificationVotes: SIMD8<Int32> = .zero
+        /// How many of this cell's contributing samples carried a real
+        /// `ConfidenceGrid` observation (`Sample.isConfidenceObserved ==
+        /// true`), not a fallback value — Fase 2, finding E2. The fused
+        /// sample reports `isConfidenceObserved` as this count being > 0:
+        /// "at least one real observation contributed here," the honest
+        /// threshold for "this point's confidence isn't entirely made up,"
+        /// as opposed to requiring *every* contributing sample to be real
+        /// (which would make one lone real observation among many
+        /// fallbacks count as unobserved, discarding the one genuine
+        /// signal this cell actually has).
+        var observedConfidenceCount: Int32 = 0
     }
 
     private var cells: [Int64: Cell] = [:]
@@ -131,6 +153,9 @@ final class VoxelAccumulator {
         cell.confidenceSum += sample.confidence
         cell.weightSum += weight
         cell.observationCount += 1
+        if sample.isConfidenceObserved {
+            cell.observedConfidenceCount += 1
+        }
         if let lane = Self.voteLane(for: sample.classificationRawValue) {
             cell.classificationVotes[lane] += 1
         }
@@ -158,6 +183,9 @@ final class VoxelAccumulator {
         cell.confidenceSum -= sample.confidence
         cell.weightSum -= weight
         cell.observationCount -= 1
+        if sample.isConfidenceObserved {
+            cell.observedConfidenceCount = max(cell.observedConfidenceCount - 1, 0)
+        }
         if let lane = Self.voteLane(for: sample.classificationRawValue) {
             cell.classificationVotes[lane] = max(cell.classificationVotes[lane] - 1, 0)
         }
@@ -199,7 +227,11 @@ final class VoxelAccumulator {
             let normal = normalLength > 0 ? cell.weightedNormalSum / normalLength : SIMD3<Float>(0, 1, 0)
             let confidence = cell.confidenceSum / Float(cell.observationCount)
             let classification = Self.majorityClassification(from: cell.classificationVotes)
-            return Sample(position: position, confidence: confidence, color: color, normal: normal, classificationRawValue: classification)
+            return Sample(
+                position: position, confidence: confidence, color: color, normal: normal,
+                classificationRawValue: classification,
+                isConfidenceObserved: cell.observedConfidenceCount > 0
+            )
         }
     }
 

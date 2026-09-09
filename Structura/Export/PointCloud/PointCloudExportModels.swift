@@ -36,4 +36,16 @@ struct PointCloudExportPoint {
     var color: SIMD3<Float> = SIMD3<Float>(0.5, 0.5, 0.5)
     var normal: SIMD3<Float> = SIMD3<Float>(0, 1, 0)
     var classification: PointCloudMeshClassification = .none
+    /// `false` when `confidence` above is a fallback value, not a real
+    /// depth-pipeline observation (`VoxelAccumulator.Sample
+    /// .isConfidenceObserved`, `ARPointCloudSession`'s `ConfidenceGrid`
+    /// lookup) — Fase 2 of the architecture audit, finding E2: an exported
+    /// file must be able to tell a real confidence reading apart from a
+    /// number that only exists because *something* has to go in the field.
+    /// `LASExporter` uses this to write an honest "no observation" sentinel
+    /// into Intensity instead of a value indistinguishable from a real
+    /// mid-confidence reading. Defaults to `true` so every pre-existing
+    /// construction site (tests, `PLYPointCloudReader`) keeps compiling
+    /// unchanged, per this struct's own established convention above.
+    var isConfidenceObserved: Bool = true
 }

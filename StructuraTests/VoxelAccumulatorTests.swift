@@ -13,9 +13,13 @@ final class VoxelAccumulatorTests: XCTestCase {
         confidence: Float,
         color: SIMD3<Float> = SIMD3(0.5, 0.5, 0.5),
         normal: SIMD3<Float> = SIMD3(0, 1, 0),
-        classification: UInt8 = 0
+        classification: UInt8 = 0,
+        isConfidenceObserved: Bool = true
     ) -> VoxelAccumulator.Sample {
-        VoxelAccumulator.Sample(position: position, confidence: confidence, color: color, normal: normal, classificationRawValue: classification)
+        VoxelAccumulator.Sample(
+            position: position, confidence: confidence, color: color, normal: normal,
+            classificationRawValue: classification, isConfidenceObserved: isConfidenceObserved
+        )
     }
 
     // MARK: - Weighted averaging (the plan's literal verification criterion)
@@ -277,6 +281,67 @@ final class VoxelAccumulatorTests: XCTestCase {
             XCTAssertEqual(lhs.position.x, rhs.position.x, accuracy: 0.001)
             XCTAssertEqual(lhs.confidence, rhs.confidence, accuracy: 0.001)
         }
+    }
+
+    // MARK: - isConfidenceObserved (Fase 2, finding E2)
+
+    func testFusedSampleIsObservedWhenEveryContributorIsObserved() throws {
+        let accumulator = VoxelAccumulator()
+        let position = SIMD3<Float>(1, 1, 1)
+        accumulator.record(sample(position, confidence: 0.6, isConfidenceObserved: true))
+        accumulator.record(sample(position, confidence: 0.9, isConfidenceObserved: true))
+
+        let fused = try XCTUnwrap(accumulator.fusedSamples().first)
+        XCTAssertTrue(fused.isConfidenceObserved)
+    }
+
+    func testFusedSampleIsUnobservedWhenEveryContributorIsAFallback() throws {
+        let accumulator = VoxelAccumulator()
+        let position = SIMD3<Float>(2, 2, 2)
+        accumulator.record(sample(position, confidence: 0.5, isConfidenceObserved: false))
+        accumulator.record(sample(position, confidence: 0.5, isConfidenceObserved: false))
+
+        let fused = try XCTUnwrap(accumulator.fusedSamples().first)
+        XCTAssertFalse(fused.isConfidenceObserved)
+    }
+
+    func testFusedSampleIsObservedIfAtLeastOneContributorIsReal() throws {
+        // One real observation among several fallbacks still means this
+        // point's confidence isn't entirely made up — see `Cell
+        // .observedConfidenceCount`'s doc comment for why the threshold is
+        // "at least one," not "every contributor."
+        let accumulator = VoxelAccumulator()
+        let position = SIMD3<Float>(3, 3, 3)
+        accumulator.record(sample(position, confidence: 0.5, isConfidenceObserved: false))
+        accumulator.record(sample(position, confidence: 0.5, isConfidenceObserved: false))
+        accumulator.record(sample(position, confidence: 0.8, isConfidenceObserved: true))
+
+        let fused = try XCTUnwrap(accumulator.fusedSamples().first)
+        XCTAssertTrue(fused.isConfidenceObserved)
+    }
+
+    func testRemovingTheOnlyObservedContributorMakesTheCellUnobservedAgain() throws {
+        let accumulator = VoxelAccumulator()
+        let position = SIMD3<Float>(4, 4, 4)
+        let observed = sample(position, confidence: 0.7, isConfidenceObserved: true)
+        let fallback = sample(position, confidence: 0.5, isConfidenceObserved: false)
+        accumulator.record(fallback)
+        accumulator.record(observed)
+        XCTAssertTrue(try XCTUnwrap(accumulator.fusedSamples().first).isConfidenceObserved)
+
+        accumulator.remove(observed)
+
+        XCTAssertFalse(try XCTUnwrap(accumulator.fusedSamples().first).isConfidenceObserved)
+    }
+
+    func testConstructingASampleWithoutSpecifyingItDefaultsToObserved() {
+        // Matches this struct's own documented convention: pre-existing
+        // construction sites that never mention `isConfidenceObserved`
+        // must keep compiling, and must keep meaning "a real observation."
+        let implicit = VoxelAccumulator.Sample(
+            position: .zero, confidence: 0.5, color: .zero, normal: SIMD3(0, 1, 0), classificationRawValue: 0
+        )
+        XCTAssertTrue(implicit.isConfidenceObserved)
     }
 
     // MARK: - Voxel hashing (shared packing scheme)

@@ -64,6 +64,7 @@ targets:
       - path: Structura/Capture3D/AngularVelocityGate.swift
       - path: Structura/Export/PointCloud/PointCloudMeshClassification.swift
       - path: Structura/Export/PointCloud/PointCloudExportModels.swift
+      - path: Structura/Export/PointCloud/ScanMetadataReport.swift
       - path: Structura/Export/PointCloud/TopographicAxisConvention.swift
       - path: Structura/Export/PointCloud/LocalEngineeringCRS.swift
       - path: Structura/Export/PointCloud/LASExporter.swift

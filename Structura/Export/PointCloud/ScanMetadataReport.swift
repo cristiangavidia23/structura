@@ -21,7 +21,24 @@ struct ScanMetadataReport: Codable {
     /// frame — a coarse coverage proxy, not a real triangulated-surface
     /// density. `nil` if the scan has no horizontal extent at all.
     var pointDensityPerSquareMeter: Double?
+    /// Mean confidence **over points with a real observation only**
+    /// (`PointCloudExportPoint.isConfidenceObserved == true`) — Fase 2 of
+    /// the architecture audit, finding E2. Averaging in every fallback
+    /// value alongside real ones (the pre-Fase-2 behavior) silently pulled
+    /// this number toward whatever the fallback constant was, regardless
+    /// of how much of the scan that fallback actually covered; see
+    /// `unobservedConfidencePointFraction` below for that coverage number
+    /// instead. `0` if there are no observed points at all, matching this
+    /// field's pre-existing "empty scan" convention.
     var meanConfidence: Float
+    /// Fraction (0...1) of `pointCount` whose confidence is a fallback
+    /// value, not a real depth-pipeline observation — the number
+    /// `meanConfidence` above does *not* cover. `0` means every exported
+    /// point carries a genuine confidence reading; closer to `1` means most
+    /// of the scan's confidence data is a placeholder, which is itself a
+    /// signal the depth-pipeline coverage (`ProScanConfig.depthSampleHz`/
+    /// `depthPixelStride`) may need to be higher for scans like this one.
+    var unobservedConfidencePointFraction: Double
     var units: String
     var coordinateReferenceSystem: String
     /// Declared accuracy of the control-point anchor, in meters, if one was
@@ -36,9 +53,15 @@ struct ScanMetadataReport: Codable {
         coordinateReferenceSystem: String,
         controlPointDeclaredAccuracyMeters: Double? = nil
     ) -> ScanMetadataReport {
-        let meanConfidence: Float = points.isEmpty
+        // Fase 2, finding E2: averaged only over points with a real
+        // observation — see this field's doc comment.
+        let observedPoints = points.filter(\.isConfidenceObserved)
+        let meanConfidence: Float = observedPoints.isEmpty
             ? 0
-            : points.reduce(Float(0)) { $0 + $1.confidence } / Float(points.count)
+            : observedPoints.reduce(Float(0)) { $0 + $1.confidence } / Float(observedPoints.count)
+        let unobservedConfidencePointFraction: Double = points.isEmpty
+            ? 0
+            : Double(points.count - observedPoints.count) / Double(points.count)
 
         var minX = Float.greatestFiniteMagnitude, maxX = -Float.greatestFiniteMagnitude
         var minZ = Float.greatestFiniteMagnitude, maxZ = -Float.greatestFiniteMagnitude
@@ -74,6 +97,7 @@ struct ScanMetadataReport: Codable {
             pointCount: points.count,
             pointDensityPerSquareMeter: density,
             meanConfidence: meanConfidence,
+            unobservedConfidencePointFraction: unobservedConfidencePointFraction,
             units: "meters",
             coordinateReferenceSystem: coordinateReferenceSystem,
             controlPointDeclaredAccuracyMeters: controlPointDeclaredAccuracyMeters

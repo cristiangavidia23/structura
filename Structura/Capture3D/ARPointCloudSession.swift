@@ -236,7 +236,8 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
                 confidence: sample.confidence,
                 color: sample.color,
                 normal: sample.normal,
-                classification: PointCloudMeshClassification(rawValue: sample.classificationRawValue) ?? .none
+                classification: PointCloudMeshClassification(rawValue: sample.classificationRawValue) ?? .none,
+                isConfidenceObserved: sample.isConfidenceObserved
             )
         }
     }
@@ -549,12 +550,19 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
                     // landed, especially right after the throttle in `processFrame`
                     // skips a frame) falls back to the *minimum acceptable*
                     // confidence, not the maximum — there's no real signal here,
-                    // so treating it as barely-acceptable is honest; treating it
-                    // as fully trusted would repeat the exact fabrication this
-                    // fixes. `confidenceGrid` now has its own lock (see that
+                    // so treating it as barely-acceptable is honest as a number to
+                    // feed the renderer/PLY. But Fase 2 (finding E2) is precisely
+                    // that a *fallback number* must never be indistinguishable from
+                    // a *real* one to a downstream engineering consumer of the
+                    // exported file — `observedConfidence == nil` is threaded
+                    // through as `isConfidenceObserved: false` below so
+                    // `LASExporter` can write an honest "no observation" sentinel
+                    // instead of a value that reads as a genuine mid-confidence
+                    // reading. `confidenceGrid` now has its own lock (see that
                     // type) precisely because this call and `processFrame`'s
                     // `record` below run on two different queues.
-                    let confidence = confidenceGrid.confidence(at: worldVertex) ?? ProScanConfig.minimumNormalizedConfidence
+                    let observedConfidence = confidenceGrid.confidence(at: worldVertex)
+                    let confidence = observedConfidence ?? ProScanConfig.minimumNormalizedConfidence
                     let classificationRawValue = vertexClassifications[vertexIndex] ?? PointCloudMeshClassification.none.rawValue
 
                     samples.append(VoxelAccumulator.Sample(
@@ -562,7 +570,8 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
                         confidence: confidence,
                         color: color,
                         normal: worldNormal,
-                        classificationRawValue: classificationRawValue
+                        classificationRawValue: classificationRawValue,
+                        isConfidenceObserved: observedConfidence != nil
                     ))
                 }
             }

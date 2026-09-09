@@ -38,6 +38,19 @@ enum LASExporter {
     static let pointRecordLength: UInt16 = 36
     private static let pointDataRecordFormat: UInt8 = 7
 
+    /// Intensity value written for a point whose confidence is a fallback
+    /// (`PointCloudExportPoint.isConfidenceObserved == false`), not a real
+    /// depth-pipeline observation — Fase 2 of the architecture audit,
+    /// finding E2 ("nunca 0,5 inventado en un LAS"). `0` is unambiguous
+    /// against every *real* observation this exporter ever writes: a
+    /// confidence value only reaches `ConfidenceGrid`/this exporter after
+    /// `ProScanConfig.isConfidenceAcceptable` has already required it to be
+    /// `>= minimumNormalizedConfidence` (0.5), so a genuine observation's
+    /// Intensity always lands at `32768` (`0.5 * 65535`, rounded) or above
+    /// — `0` can only mean "no real observation," never a legitimately low
+    /// confidence reading.
+    static let unobservedConfidenceIntensity: UInt16 = 0
+
     /// OGC Coordinate System WKT VLR identity (LAS 1.4 §3.2.2) — verified
     /// against the spec PDF, not the newer/incompatible LAS 1.5 convention
     /// (which uses a different User ID/Record ID scheme entirely).
@@ -102,7 +115,14 @@ enum LASExporter {
             let x = Int32(((Double(position.x) - offsetX) / scale).rounded())
             let y = Int32(((Double(position.y) - offsetY) / scale).rounded())
             let z = Int32(((Double(position.z) - offsetZ) / scale).rounded())
-            let intensity = UInt16(clamping: Int((point.confidence * 65535).rounded()))
+            // Fase 2, finding E2: a point whose confidence is only ever a
+            // fallback (`isConfidenceObserved == false`) must not be
+            // written as a number indistinguishable from a real
+            // observation — see `unobservedConfidenceIntensity`'s doc
+            // comment for why `0` is the unambiguous choice here.
+            let intensity = point.isConfidenceObserved
+                ? UInt16(clamping: Int((point.confidence * 65535).rounded()))
+                : Self.unobservedConfidenceIntensity
 
             appendLE(&data, x)
             appendLE(&data, y)
