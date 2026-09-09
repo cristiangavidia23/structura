@@ -62,7 +62,15 @@ final class ProScanCoordinator: ObservableObject {
     let performanceMonitor = PerformanceMonitor()
     let pointCloudStore = PointCloudStore()
 
-    private let arSession = ARPointCloudSession()
+    // `nonisolated(unsafe)`: the referenced `ARPointCloudSession` is
+    // internally synchronized (`meshLock`) and is documented
+    // `@unchecked Sendable` for that reason — this property never changes
+    // after `init`, so the "unsafe" here is Swift trusting that
+    // documentation rather than being unable to prove it itself. Without
+    // this, `currentMeshPointsSnapshot(authoritative:)` below would force a
+    // hop onto the main actor just to read `arSession`, defeating the point
+    // of making that method `nonisolated`.
+    private nonisolated(unsafe) let arSession = ARPointCloudSession()
     var session: ARSession { arSession.session }
     private let hapticEngine = HapticEngineManager()
     private(set) lazy var haptics = HapticFeedbackAdapter(engineManager: hapticEngine)
@@ -199,13 +207,24 @@ final class ProScanCoordinator: ObservableObject {
     /// The scan to actually export/visualize: ARKit's fused mesh
     /// reconstruction rather than the raw per-frame depth accumulated in
     /// `pointCloudStore` (that one only drives the sampling-tick haptic and
-    /// coverage-adjacent HUD signal during capture).
+    /// coverage-adjacent HUD signal during capture) — read **without**
+    /// hopping onto the main actor. `ARPointCloudSession.currentMeshPoints` is internally
+    /// synchronized and touches no UI-bound state, so it is genuinely safe
+    /// to call from whatever background context the caller is already on —
+    /// unlike a plain method on this `@MainActor` coordinator, which would
+    /// force every caller onto the main actor just to *receive* the
+    /// result, even though nothing about producing that result needs to
+    /// run there. `ProScanCaptureView`'s autosave loop and `finish()` both
+    /// call this instead of a main-actor-isolated equivalent, so the read
+    /// — and, for `finish()`, the O(points) authoritative rebuild — happen
+    /// entirely off the main actor.
+    ///
     /// - Parameter authoritative: pass `true` only at the final export, to
     ///   rebuild the fused set from scratch and shed any floating-point
     ///   residue a capture's worth of incremental record/remove cycles left
     ///   behind. The autosave path must leave it `false` — rebuilding on a
     ///   timer is finding C1 of the architecture audit.
-    func currentMeshPoints(authoritative: Bool = false) -> [PointCloudExportPoint] {
+    nonisolated func currentMeshPointsSnapshot(authoritative: Bool = false) -> [PointCloudExportPoint] {
         arSession.currentMeshPoints(authoritative: authoritative)
     }
 

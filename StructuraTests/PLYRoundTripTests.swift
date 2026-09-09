@@ -100,4 +100,91 @@ final class PLYRoundTripTests: XCTestCase {
         let metadata = PointCloudExportMetadata(capturedAt: Date(), location: nil, pointCount: 0)
         XCTAssertThrowsError(try PLYExporter.write([], metadata: metadata, to: FileManager.default.temporaryDirectory, baseName: "empty"))
     }
+
+    // MARK: - Streamed writing (Fase 1: audit finding C7)
+
+    /// The exact shape of `PLYExporter`'s real caller: autosave writes the
+    /// same `baseName` repeatedly, every few seconds, as the scan grows.
+    /// `write` must fully replace the previous file's content each time —
+    /// not append to it, and not leave stray bytes from a longer previous
+    /// version behind a shorter new one.
+    func testRepeatedWritesToTheSameNameFullyReplaceThePreviousContent() throws {
+        let baseName = "ply_autosave_\(UUID().uuidString)"
+        let directory = FileManager.default.temporaryDirectory
+
+        func point(_ x: Float) -> PointCloudExportPoint {
+            PointCloudExportPoint(position: SIMD3(x, 0, 0), confidence: 1, color: SIMD3(1, 1, 1), normal: SIMD3(0, 1, 0), classification: .wall)
+        }
+
+        let metadata = PointCloudExportMetadata(capturedAt: Date(), location: nil, pointCount: 0)
+
+        // First "tick": a larger scan than the second, so a naive
+        // overwrite that failed to truncate would leave the second read
+        // seeing leftover vertices past its own declared `element vertex`
+        // count — or, worse, a reader that trusts the header's count would
+        // silently miss that the trailing bytes are stale.
+        let firstTick = (0..<500).map { point(Float($0)) }
+        let firstURL = try PLYExporter.write(firstTick, metadata: metadata, to: directory, baseName: baseName)
+        defer { try? FileManager.default.removeItem(at: firstURL) }
+        let firstFileSize = try FileManager.default.attributesOfItem(atPath: firstURL.path)[.size] as? Int
+
+        let secondTick = (0..<10).map { point(Float($0) * 2) }
+        let secondURL = try PLYExporter.write(secondTick, metadata: metadata, to: directory, baseName: baseName)
+        let secondFileSize = try FileManager.default.attributesOfItem(atPath: secondURL.path)[.size] as? Int
+
+        XCTAssertEqual(firstURL, secondURL, "Autosave writes the same filename every tick.")
+        XCTAssertNotEqual(firstFileSize, secondFileSize, "A shorter second write must actually shrink the file, not leave trailing bytes from the first.")
+
+        let readBack = try XCTUnwrap(PLYPointCloudReader.read(from: secondURL))
+        XCTAssertEqual(readBack.count, secondTick.count)
+        XCTAssertEqual(readBack.map(\.position.x), secondTick.map(\.position.x))
+    }
+
+    /// Exercises multiple internal batch flushes (see `PLYExporter
+    /// .pointsPerBatch`), not just a single-batch write, so a boundary bug
+    /// in the batching itself (a dropped or duplicated point at a flush
+    /// edge) would show up as a count or ordering mismatch.
+    func testWriteSpanningMultipleBatchesRoundTrips() throws {
+        let count = 20_000 // several multiples of the internal batch size
+        var points: [PointCloudExportPoint] = []
+        points.reserveCapacity(count)
+        for i in 0..<count {
+            points.append(PointCloudExportPoint(
+                position: SIMD3(Float(i) * 0.001, 0, 0),
+                confidence: 0.5,
+                color: SIMD3(0.2, 0.4, 0.6),
+                normal: SIMD3(0, 1, 0),
+                classification: .floor
+            ))
+        }
+
+        let metadata = PointCloudExportMetadata(capturedAt: Date(), location: nil, pointCount: points.count)
+        let baseName = "ply_multibatch_\(UUID().uuidString)"
+        let url = try PLYExporter.write(points, metadata: metadata, to: FileManager.default.temporaryDirectory, baseName: baseName)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let readBack = try XCTUnwrap(PLYPointCloudReader.read(from: url))
+        XCTAssertEqual(readBack.count, count)
+        XCTAssertEqual(readBack.first?.position.x, 0)
+        XCTAssertEqual(readBack.last?.position.x, Float(count - 1) * 0.001, accuracy: 0.0001)
+    }
+
+    /// `write` must not leave its `.tmp` staging file behind, whether it
+    /// succeeds (moved/replaced into the final name) or the temp file is
+    /// otherwise orphaned.
+    func testWriteLeavesNoTemporaryFileBehind() throws {
+        let metadata = PointCloudExportMetadata(capturedAt: Date(), location: nil, pointCount: 1)
+        let baseName = "ply_notemp_\(UUID().uuidString)"
+        let directory = FileManager.default.temporaryDirectory
+        let url = try PLYExporter.write([point(1)], metadata: metadata, to: directory, baseName: baseName)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let siblings = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+        let strayTempFiles = siblings.filter { $0.hasPrefix(baseName) && $0 != url.lastPathComponent }
+        XCTAssertTrue(strayTempFiles.isEmpty, "No .tmp staging file should remain: \(strayTempFiles)")
+    }
+
+    private func point(_ x: Float) -> PointCloudExportPoint {
+        PointCloudExportPoint(position: SIMD3(x, 0, 0), confidence: 1, color: SIMD3(1, 1, 1), normal: SIMD3(0, 1, 0), classification: .wall)
+    }
 }

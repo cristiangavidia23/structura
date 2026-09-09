@@ -14,6 +14,18 @@ import Foundation
 /// `PLYPointCloudReader` is this file's matched pair, not a general-purpose
 /// PLY parser — the two are updated together whenever this schema changes,
 /// as they are here (adding `normal`/`classification`).
+///
+/// # Streamed to disk (Fase 1 of the architecture audit, finding C7)
+///
+/// The previous version built the *entire* file as one in-memory `Data`
+/// before writing it: a peak allocation the size of the whole export, on
+/// top of the point array itself — and this exporter is what
+/// `ProScanCaptureView`'s autosave calls every
+/// `ProScanConfig.autosaveIntervalSeconds`, on a scan that can hold up to
+/// `ProScanConfig.maximumMeshPointBudget` points. `write(_:metadata:to:
+/// baseName:)` now streams the point data through a fixed-size buffer,
+/// flushed to a `FileHandle` every `pointsPerBatch` points, so the peak
+/// in-flight buffer stays a few hundred KB regardless of scan size.
 enum PLYExporter {
     enum ExportError: Error, LocalizedError {
         case emptyPointCloud
@@ -28,6 +40,19 @@ enum PLYExporter {
             }
         }
     }
+
+    /// One vertex record's byte size, matching the header's `property`
+    /// list exactly: 7 floats (x, y, z, confidence, nx, ny, nz) + 3 uchar
+    /// color + 1 uchar classification.
+    private static let bytesPerPoint = MemoryLayout<Float>.size * 7 + 4
+
+    /// Points per flush to the `FileHandle`. Large enough to amortize the
+    /// write-syscall cost across many points, small enough that the
+    /// in-flight buffer (`pointsPerBatch * bytesPerPoint`, ~256 KB at this
+    /// size) never approaches the size of the export itself. Not derived
+    /// from measurement — a reasonable starting point, like several other
+    /// engineering constants in this pipeline (see `ProScanConfig`).
+    private static let pointsPerBatch = 8192
 
     static func write(_ points: [PointCloudExportPoint], metadata: PointCloudExportMetadata, to directory: URL, baseName: String) throws -> URL {
         guard !points.isEmpty else { throw ExportError.emptyPointCloud }
@@ -53,30 +78,76 @@ enum PLYExporter {
 
         """
 
-        var data = Data(header.utf8)
-        // 7 floats (x,y,z,confidence,nx,ny,nz) + 3 uchar color + 1 uchar classification.
-        data.reserveCapacity(data.count + points.count * (MemoryLayout<Float>.size * 7 + 4))
-
-        for point in points {
-            withUnsafeBytes(of: point.position.x) { data.append(contentsOf: $0) }
-            withUnsafeBytes(of: point.position.y) { data.append(contentsOf: $0) }
-            withUnsafeBytes(of: point.position.z) { data.append(contentsOf: $0) }
-            withUnsafeBytes(of: point.confidence) { data.append(contentsOf: $0) }
-            data.append(UInt8(min(max(point.color.x * 255, 0), 255)))
-            data.append(UInt8(min(max(point.color.y * 255, 0), 255)))
-            data.append(UInt8(min(max(point.color.z * 255, 0), 255)))
-            withUnsafeBytes(of: point.normal.x) { data.append(contentsOf: $0) }
-            withUnsafeBytes(of: point.normal.y) { data.append(contentsOf: $0) }
-            withUnsafeBytes(of: point.normal.z) { data.append(contentsOf: $0) }
-            data.append(point.classification.rawValue)
-        }
-
         let url = directory.appendingPathComponent("\(baseName).ply")
+        // Streamed to a sibling temp file, then moved into place — same
+        // directory, so the move is a same-volume rename and therefore
+        // atomic, matching the all-or-nothing guarantee the previous
+        // `Data.write(options: .atomic)` gave, without needing the whole
+        // file in memory to get it. This matters specifically because
+        // autosave overwrites this exact filename every few seconds during
+        // a live capture: a reader (the in-app PLY viewer, opened after the
+        // fact) must never be able to observe a half-written file.
+        let temporaryURL = directory.appendingPathComponent("\(baseName).ply.\(UUID().uuidString).tmp")
+
         do {
-            try data.write(to: url, options: .atomic)
+            try writeStreaming(points, header: header, to: temporaryURL)
         } catch {
+            try? FileManager.default.removeItem(at: temporaryURL)
             throw ExportError.writeFailed(underlying: error)
         }
+
+        do {
+            if FileManager.default.fileExists(atPath: url.path) {
+                _ = try FileManager.default.replaceItemAt(url, withItemAt: temporaryURL)
+            } else {
+                try FileManager.default.moveItem(at: temporaryURL, to: url)
+            }
+        } catch {
+            try? FileManager.default.removeItem(at: temporaryURL)
+            throw ExportError.writeFailed(underlying: error)
+        }
+
         return url
+    }
+
+    /// Streams `points` to `url` in fixed-size batches. Throws (rather than
+    /// silently truncating) on any I/O failure partway through — the caller
+    /// above removes the partial temp file either way, so a failure here
+    /// never leaves a corrupt file at the real destination.
+    private static func writeStreaming(_ points: [PointCloudExportPoint], header: String, to url: URL) throws {
+        guard FileManager.default.createFile(atPath: url.path, contents: nil) else {
+            throw ExportError.writeFailed(underlying: CocoaError(.fileWriteUnknown))
+        }
+        let handle = try FileHandle(forWritingTo: url)
+        defer { try? handle.close() }
+
+        try handle.write(contentsOf: Data(header.utf8))
+
+        var buffer = Data(capacity: pointsPerBatch * bytesPerPoint)
+        var pointsInBuffer = 0
+
+        for point in points {
+            withUnsafeBytes(of: point.position.x) { buffer.append(contentsOf: $0) }
+            withUnsafeBytes(of: point.position.y) { buffer.append(contentsOf: $0) }
+            withUnsafeBytes(of: point.position.z) { buffer.append(contentsOf: $0) }
+            withUnsafeBytes(of: point.confidence) { buffer.append(contentsOf: $0) }
+            buffer.append(UInt8(min(max(point.color.x * 255, 0), 255)))
+            buffer.append(UInt8(min(max(point.color.y * 255, 0), 255)))
+            buffer.append(UInt8(min(max(point.color.z * 255, 0), 255)))
+            withUnsafeBytes(of: point.normal.x) { buffer.append(contentsOf: $0) }
+            withUnsafeBytes(of: point.normal.y) { buffer.append(contentsOf: $0) }
+            withUnsafeBytes(of: point.normal.z) { buffer.append(contentsOf: $0) }
+            buffer.append(point.classification.rawValue)
+            pointsInBuffer += 1
+
+            if pointsInBuffer >= pointsPerBatch {
+                try handle.write(contentsOf: buffer)
+                buffer.removeAll(keepingCapacity: true)
+                pointsInBuffer = 0
+            }
+        }
+        if !buffer.isEmpty {
+            try handle.write(contentsOf: buffer)
+        }
     }
 }

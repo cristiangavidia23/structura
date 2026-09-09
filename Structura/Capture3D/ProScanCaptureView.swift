@@ -205,16 +205,6 @@ struct ProScanCaptureView: View {
         proScan.stop()
         isExporting = true
 
-        // ARKit's fused mesh reconstruction, not the raw per-frame depth
-        // that only drives the live heatmap overlay — meaningfully more
-        // stable since it's built by integrating many frames over time.
-        // `authoritative:` rebuilds the fused set from every stored sample
-        // rather than reading the incrementally-maintained one. It costs
-        // O(points) — paid once, here, where the file the user keeps is
-        // being written — and guarantees the export carries no
-        // floating-point residue from the capture's record/remove cycles.
-        // The autosave below deliberately does *not* pass it.
-        let exportPoints = proScan.currentMeshPoints(authoritative: true)
         let directory = store.scansDirectory
         let baseName = "\(record.id.uuidString)_pointcloud"
 
@@ -224,6 +214,34 @@ struct ProScanCaptureView: View {
         let trackingDegradedTickCount = proScan.trackingDegradedTickCount
 
         Task {
+            // ARKit's fused mesh reconstruction, not the raw per-frame depth
+            // that only drives the live heatmap overlay — meaningfully more
+            // stable since it's built by integrating many frames over time.
+            //
+            // Read here, as the first thing this `Task` does, rather than
+            // synchronously in `finish()` before the `Task` even starts:
+            // `finish()` itself runs on the main thread (SwiftUI invokes it
+            // directly from button/`onChange` callbacks), so doing an
+            // O(points) rebuild there would block the main thread for
+            // however long that rebuild takes — exactly the kind of
+            // main-thread cost this phase removes elsewhere. A `Task`
+            // created from a plain, non-actor-isolated function runs on the
+            // cooperative thread pool by default, so this call — and the
+            // awaits that follow it — genuinely execute off the main
+            // thread. `currentMeshPointsSnapshot` (not a main-actor-
+            // isolated method) is what makes that true: it reads
+            // `ARPointCloudSession` directly, which is internally
+            // synchronized and safe to call from here.
+            //
+            // `authoritative: true` rebuilds the fused set from every
+            // stored sample rather than reading the incrementally-
+            // maintained one — O(points), paid once, here, where the file
+            // the user keeps is being written, and it guarantees the
+            // export carries no floating-point residue from the capture's
+            // record/remove cycles. The autosave path deliberately leaves
+            // this `false`.
+            let exportPoints = proScan.currentMeshPointsSnapshot(authoritative: true)
+
             let coordinate = await PointCloudLocationProvider().requestLocation()
             let metadata = PointCloudExportMetadata(capturedAt: Date(), location: coordinate, pointCount: exportPoints.count)
             let coordinator = PointCloudExportCoordinator()
@@ -295,7 +313,13 @@ struct ProScanCaptureView: View {
 
     private func autosave() async {
         guard proScan.isRunning else { return }
-        let points = proScan.currentMeshPoints()
+        // `currentMeshPointsSnapshot`, not the old main-actor-isolated
+        // accessor: this is the whole point of Fase 1's step 4 — the
+        // snapshot this autosave writes is an immutable array read off the
+        // incremental accumulator, and reading it must not force a hop
+        // onto the main actor every `ProScanConfig.autosaveIntervalSeconds`
+        // while the user is actively scanning.
+        let points = proScan.currentMeshPointsSnapshot()
         guard !points.isEmpty else { return }
 
         let metadata = PointCloudExportMetadata(capturedAt: Date(), location: nil, pointCount: points.count)

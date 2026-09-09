@@ -6,7 +6,19 @@ import UIKit
 /// `RoomCaptureSession` has fully stopped, since ARKit allows a single
 /// active session per process. Captures dense scene-depth points with
 /// per-point confidence for the Metal heatmap and point-cloud export.
-final class ARPointCloudSession: NSObject {
+/// `@unchecked Sendable`: every mutable stored property this type exposes
+/// (`meshPointsByAnchor`, `fusedAccumulator`, `meshPointCountTotal`) is only
+/// ever touched under `meshLock`, and `currentMeshPoints`/
+/// `currentMeshPointCount` acquire it themselves — so a call from any
+/// thread or actor is genuinely safe, not merely assumed safe. This is what
+/// lets `ProScanCoordinator.currentMeshPointsSnapshot(authoritative:)`
+/// below read the fused point set without hopping onto the main actor
+/// (audit finding C1's remaining piece: the *read* itself, now that the
+/// read is cheap). `@unchecked` because the compiler cannot verify a
+/// hand-rolled lock the way it verifies an `actor`; the project's Fase 5
+/// strict-concurrency migration should revisit whether this can become a
+/// real `actor` instead.
+final class ARPointCloudSession: NSObject, @unchecked Sendable {
     let session = ARSession()
     private let processingQueue = DispatchQueue(label: "com.structura.arpointcloud.processing", qos: .userInitiated)
 
