@@ -20,7 +20,42 @@ import UIKit
 /// real `actor` instead.
 final class ARPointCloudSession: NSObject, @unchecked Sendable {
     let session = ARSession()
-    private let processingQueue = DispatchQueue(label: "com.structura.arpointcloud.processing", qos: .userInitiated)
+
+    /// ARSession's own delegate callback queue — kept deliberately thin.
+    /// Every delegate method below either does O(1) bookkeeping directly,
+    /// or (for mesh-anchor events) extracts only the small, frame-scoped
+    /// data `processMeshAnchor` needs and dispatches the actual per-vertex
+    /// work onto `meshProcessingQueue`, returning immediately.
+    ///
+    /// Before this phase, `processMeshAnchor`'s full per-vertex/voxel cost
+    /// ran directly on this queue, synchronously, inside the delegate
+    /// callback itself. ARKit invokes every delegate method on this queue
+    /// serially and expects the delegate to return promptly — a slow chunk
+    /// update backed up frame delivery behind it, which is the confirmed
+    /// root mechanism behind the mesh visibly freezing or fragmenting
+    /// during a real scan (architecture audit finding C4). The raw-depth
+    /// pipeline (`processFrame`) deliberately stays running directly on
+    /// this queue rather than gaining a third queue of its own: it is
+    /// already throttled to `ProScanConfig.depthSampleHz` and does a small,
+    /// bounded amount of work per invocation, unlike mesh processing's
+    /// unbounded-by-comparison per-chunk vertex count — see `processFrame`'s
+    /// doc comment for the full reasoning and the F0 profiling this should
+    /// be re-checked against.
+    private let delegateQueue = DispatchQueue(label: "com.structura.arpointcloud.delegate", qos: .userInitiated)
+
+    /// Where the expensive part of mesh-anchor processing actually runs:
+    /// per-vertex color sampling, face-classification majority voting, and
+    /// voxel accumulation (`processMeshAnchor`). Serial, not concurrent —
+    /// this matters for correctness, not just throughput: `didAdd`/
+    /// `didUpdate`/`didRemove` for the *same* anchor identifier must be
+    /// applied in the order ARKit raised them, or a removal could be
+    /// processed before a still-queued update for that anchor, which would
+    /// then wrongly resurrect it. Every mesh-anchor delegate callback below
+    /// dispatches onto this queue in the order it was invoked on the
+    /// (also serial) `delegateQueue`, which is what preserves that
+    /// ordering — a serial `DispatchQueue` never reorders blocks enqueued
+    /// onto it.
+    private let meshProcessingQueue = DispatchQueue(label: "com.structura.arpointcloud.mesh", qos: .userInitiated)
 
     /// Every pixel would be far more data than needed for a live heatmap or
     /// a reasonably sized export; sample a coarse grid instead.
@@ -28,7 +63,7 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
 
     /// Fixed at `start()` and reused per-frame from a background queue —
     /// reading `UIScreen`/orientation live on every frame would touch
-    /// main-thread-affined UIKit state from `processingQueue`.
+    /// main-thread-affined UIKit state from `delegateQueue`.
     private var viewportSize = CGSize(width: 390, height: 844)
     private var interfaceOrientation: UIInterfaceOrientation = .portrait
 
@@ -113,8 +148,9 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
     /// Throttle state for the raw per-frame depth pipeline — see
     /// `ProScanConfig.depthSampleHz`. `ARFrame.timestamp` is monotonic
     /// within a session, so a simple elapsed-time comparison is enough;
-    /// only ever read/written from `processingQueue`'s serial delegate
-    /// callbacks, so no lock is needed.
+    /// only ever read/written from `delegateQueue`'s serial delegate
+    /// callbacks (`processFrame` stays on this queue — see its doc
+    /// comment), so no lock is needed.
     private var lastProcessedFrameTimestamp: TimeInterval?
 
     /// The fused, deduplicated point set to export or visualize.
@@ -162,7 +198,7 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
 
     override init() {
         super.init()
-        session.delegateQueue = processingQueue
+        session.delegateQueue = delegateQueue
         session.delegate = self
     }
 
@@ -216,6 +252,19 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
         session.pause()
     }
 
+    /// Called synchronously from `start()`, on whatever thread called it
+    /// (the coordinator calls `start()` from the main actor) — not from
+    /// `delegateQueue` or `meshProcessingQueue`. `meshLock`/
+    /// `confidenceGrid`'s own lock make the mutations here safe regardless
+    /// of caller thread; what this does *not* guard against is a still-
+    /// in-flight `meshProcessingQueue` block from a *previous* scan on this
+    /// same `ARPointCloudSession` instance racing this reset. That would
+    /// require `stop()` to synchronously drain both queues before
+    /// returning, which it does not today — pre-existing behavior, not
+    /// something this phase changes, and out of scope for audit finding
+    /// C4 specifically. In practice each Pro Scan attempt gets a fresh
+    /// `ProScanCoordinator`/`ARPointCloudSession`, so `start()` is not
+    /// currently called more than once per instance.
     private func resetPipelineState() {
         meshLock.lock()
         meshPointsByAnchor.removeAll(keepingCapacity: false)
@@ -226,6 +275,75 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
         lastProcessedFrameTimestamp = nil
         isCoordinateFrameBroken = false
         relocalizationConfirmation.reset()
+    }
+
+    /// A frame's color image and camera parameters, copied out of a live
+    /// `ARFrame` at the moment mesh-anchor processing is dispatched onto
+    /// `meshProcessingQueue` — see `updateMeshAnchors`.
+    ///
+    /// ARKit's `ARFrame` (and the `CVPixelBuffer`s it vends, including
+    /// `capturedImage`) are only guaranteed valid for the duration of the
+    /// delegate callback that hands them out: they come from a small,
+    /// recycled buffer pool, and holding one past that callback — even
+    /// just retaining the `CVPixelBuffer` itself, let alone the `ARFrame`
+    /// — can stall ARKit's own capture pipeline. `ARMeshAnchor` has no such
+    /// restriction (its `.geometry` buffers stay valid for the anchor
+    /// object's own lifetime), which is why only the frame's color image
+    /// and camera parameters need to be copied here, not the anchor.
+    private struct MeshFrameSnapshot {
+        let lumaBytes: [UInt8]
+        let lumaBytesPerRow: Int
+        let lumaWidth: Int
+        let lumaHeight: Int
+        let chromaBytes: [UInt8]
+        let chromaBytesPerRow: Int
+        let intrinsics: CameraUnprojection.Intrinsics
+        let imageResolution: CGSize
+        let cameraTransform: simd_float4x4
+    }
+
+    /// Copies the one part of `frame` that mesh processing cannot safely
+    /// read later — the captured color image — plus the frame's camera
+    /// parameters (plain value types, copied here only for convenience).
+    /// Called synchronously on `delegateQueue`, while `frame` is still
+    /// guaranteed valid; the returned snapshot is then safe to read from
+    /// `meshProcessingQueue` after this callback has returned.
+    ///
+    /// The copy itself is a bounded, fixed-size memcpy of both YCbCr
+    /// planes (a few megabytes) — cheap relative to the per-vertex
+    /// classification/voxel work it unblocks from running on the delegate
+    /// queue, and it's what lets that work run without touching a buffer
+    /// ARKit may have already recycled by the time it does.
+    private static func makeMeshFrameSnapshot(from frame: ARFrame) -> MeshFrameSnapshot? {
+        let colorImage = frame.capturedImage
+        CVPixelBufferLockBaseAddress(colorImage, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(colorImage, .readOnly) }
+
+        guard
+            let lumaBase = CVPixelBufferGetBaseAddressOfPlane(colorImage, 0),
+            let chromaBase = CVPixelBufferGetBaseAddressOfPlane(colorImage, 1)
+        else { return nil }
+
+        let lumaBytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(colorImage, 0)
+        let lumaWidth = CVPixelBufferGetWidthOfPlane(colorImage, 0)
+        let lumaHeight = CVPixelBufferGetHeightOfPlane(colorImage, 0)
+        let chromaBytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(colorImage, 1)
+        let chromaHeight = CVPixelBufferGetHeightOfPlane(colorImage, 1)
+
+        let lumaBytes = [UInt8](UnsafeRawBufferPointer(start: lumaBase, count: lumaBytesPerRow * lumaHeight))
+        let chromaBytes = [UInt8](UnsafeRawBufferPointer(start: chromaBase, count: chromaBytesPerRow * chromaHeight))
+
+        return MeshFrameSnapshot(
+            lumaBytes: lumaBytes,
+            lumaBytesPerRow: lumaBytesPerRow,
+            lumaWidth: lumaWidth,
+            lumaHeight: lumaHeight,
+            chromaBytes: chromaBytes,
+            chromaBytesPerRow: chromaBytesPerRow,
+            intrinsics: CameraUnprojection.Intrinsics(frame.camera.intrinsics),
+            imageResolution: frame.camera.imageResolution,
+            cameraTransform: frame.camera.transform
+        )
     }
 
     /// Extracts a mesh chunk's vertices (already in the anchor's local
@@ -239,7 +357,13 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
     /// near-duplicate boundary vertices — happens later, in
     /// `currentMeshPoints()`'s `VoxelAccumulator` pass, not here.)
     ///
-    /// Coordinate systems: `anchor.transform`/`frame.camera.transform` are
+    /// Runs on `meshProcessingQueue`, not `delegateQueue` — see that
+    /// property's doc comment (architecture audit finding C4). `frame` is
+    /// a `MeshFrameSnapshot`, not a live `ARFrame`, precisely because this
+    /// runs after the delegate callback that received the real frame has
+    /// already returned.
+    ///
+    /// Coordinate systems: `anchor.transform`/`frame.cameraTransform` are
     /// ARKit world/camera space — right-handed, +Y up, camera looking down
     /// -Z. `CameraUnprojection.project` reprojects a camera-space point
     /// back onto the image plane (origin top-left, +Y down) to sample
@@ -247,26 +371,20 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
     /// depends on. Normals transform by the anchor's rotation only (a `w`
     /// component of `0`, not `1`, in the homogeneous multiply below) —
     /// translation doesn't apply to a direction.
-    private func processMeshAnchor(_ anchor: ARMeshAnchor, frame: ARFrame) {
-        let colorImage = frame.capturedImage
-        CVPixelBufferLockBaseAddress(colorImage, .readOnly)
-        defer { CVPixelBufferUnlockBaseAddress(colorImage, .readOnly) }
+    private func processMeshAnchor(_ anchor: ARMeshAnchor, frame: MeshFrameSnapshot) {
+        let lumaBytesPerRow = frame.lumaBytesPerRow
+        let lumaWidth = frame.lumaWidth
+        let lumaHeight = frame.lumaHeight
+        let chromaBytesPerRow = frame.chromaBytesPerRow
 
-        let lumaBase = CVPixelBufferGetBaseAddressOfPlane(colorImage, 0)
-        let lumaBytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(colorImage, 0)
-        let lumaWidth = CVPixelBufferGetWidthOfPlane(colorImage, 0)
-        let lumaHeight = CVPixelBufferGetHeightOfPlane(colorImage, 0)
-        let chromaBase = CVPixelBufferGetBaseAddressOfPlane(colorImage, 1)
-        let chromaBytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(colorImage, 1)
-
-        let intrinsics = CameraUnprojection.Intrinsics(frame.camera.intrinsics)
-        let imageResolution = frame.camera.imageResolution
+        let intrinsics = frame.intrinsics
+        let imageResolution = frame.imageResolution
         let colorScaleX = Float(lumaWidth) / Float(imageResolution.width)
         let colorScaleY = Float(lumaHeight) / Float(imageResolution.height)
 
         // World -> camera space, to reproject each mesh vertex back into
         // the color image and sample what the camera actually saw there.
-        let viewMatrix = frame.camera.transform.inverse
+        let viewMatrix = frame.cameraTransform.inverse
         let anchorTransform = anchor.transform
 
         let vertexSource = anchor.geometry.vertices
@@ -293,67 +411,82 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
         var samples: [VoxelAccumulator.Sample] = []
         samples.reserveCapacity(sampledVertexIndices.count)
 
-        for vertexIndex in sampledVertexIndices {
-            let localVertex = vertexBuffer
-                .advanced(by: vertexIndex * vertexStride)
-                .assumingMemoryBound(to: SIMD3<Float>.self)
-                .pointee
-            let localNormal = normalBuffer
-                .advanced(by: vertexIndex * normalStride)
-                .assumingMemoryBound(to: SIMD3<Float>.self)
-                .pointee
+        // The snapshot's color planes are plain owned `[UInt8]` arrays, not
+        // a locked `CVPixelBuffer` — no lock/unlock needed here, just a
+        // pointer to iterate them with. `sampleColor` takes read-only
+        // `UnsafeRawPointer`s now for exactly this case (see its doc
+        // comment); `processFrame`'s call site still passes it pointers
+        // sourced from a locked `CVPixelBuffer`, unaffected by this change.
+        frame.lumaBytes.withUnsafeBytes { lumaBuffer in
+            frame.chromaBytes.withUnsafeBytes { chromaBuffer in
+                let lumaBase = lumaBuffer.baseAddress
+                let chromaBase = chromaBuffer.baseAddress
 
-            let world4 = anchorTransform * SIMD4<Float>(localVertex, 1)
-            let worldVertex = SIMD3<Float>(world4.x, world4.y, world4.z)
-            let worldNormal4 = anchorTransform * SIMD4<Float>(localNormal, 0)
-            let worldNormalRaw = SIMD3<Float>(worldNormal4.x, worldNormal4.y, worldNormal4.z)
-            let normalLength = simd_length(worldNormalRaw)
-            let worldNormal = normalLength > 0 ? worldNormalRaw / normalLength : SIMD3<Float>(0, 1, 0)
+                for vertexIndex in sampledVertexIndices {
+                    let localVertex = vertexBuffer
+                        .advanced(by: vertexIndex * vertexStride)
+                        .assumingMemoryBound(to: SIMD3<Float>.self)
+                        .pointee
+                    let localNormal = normalBuffer
+                        .advanced(by: vertexIndex * normalStride)
+                        .assumingMemoryBound(to: SIMD3<Float>.self)
+                        .pointee
 
-            let camera4 = viewMatrix * SIMD4<Float>(worldVertex, 1)
-            let cameraPoint = SIMD3<Float>(camera4.x, camera4.y, camera4.z)
+                    let world4 = anchorTransform * SIMD4<Float>(localVertex, 1)
+                    let worldVertex = SIMD3<Float>(world4.x, world4.y, world4.z)
+                    let worldNormal4 = anchorTransform * SIMD4<Float>(localNormal, 0)
+                    let worldNormalRaw = SIMD3<Float>(worldNormal4.x, worldNormal4.y, worldNormal4.z)
+                    let normalLength = simd_length(worldNormalRaw)
+                    let worldNormal = normalLength > 0 ? worldNormalRaw / normalLength : SIMD3<Float>(0, 1, 0)
 
-            // Same LiDAR-reliable range as the raw depth pipeline below —
-            // a vertex being reprojected from too far or too close in
-            // *this* observing frame is the same physical unreliability
-            // concern regardless of which pipeline produced it.
-            let depth = -cameraPoint.z
-            guard ProScanConfig.isDepthValid(depth) else { continue }
+                    let camera4 = viewMatrix * SIMD4<Float>(worldVertex, 1)
+                    let cameraPoint = SIMD3<Float>(camera4.x, camera4.y, camera4.z)
 
-            guard let imagePixel = CameraUnprojection.project(cameraSpacePoint: cameraPoint, intrinsics: intrinsics) else {
-                continue // behind the camera this frame
+                    // Same LiDAR-reliable range as the raw depth pipeline below —
+                    // a vertex being reprojected from too far or too close in
+                    // *this* observing frame is the same physical unreliability
+                    // concern regardless of which pipeline produced it.
+                    let depth = -cameraPoint.z
+                    guard ProScanConfig.isDepthValid(depth) else { continue }
+
+                    guard let imagePixel = CameraUnprojection.project(cameraSpacePoint: cameraPoint, intrinsics: intrinsics) else {
+                        continue // behind the camera this frame
+                    }
+                    let colorX = Int((imagePixel.x * colorScaleX).rounded())
+                    let colorY = Int((imagePixel.y * colorScaleY).rounded())
+                    guard colorX >= 0, colorX < lumaWidth, colorY >= 0, colorY < lumaHeight else {
+                        continue
+                    }
+
+                    let color = Self.sampleColor(
+                        lumaBase: lumaBase, lumaBytesPerRow: lumaBytesPerRow,
+                        chromaBase: chromaBase, chromaBytesPerRow: chromaBytesPerRow,
+                        x: colorX, y: colorY
+                    )
+                    // Real per-point confidence from the depth pipeline's
+                    // observations at this voxel, rather than a fabricated
+                    // constant. A voxel the depth pipeline has never sampled (the
+                    // fused mesh can extend slightly beyond where raw depth has
+                    // landed, especially right after the throttle in `processFrame`
+                    // skips a frame) falls back to the *minimum acceptable*
+                    // confidence, not the maximum — there's no real signal here,
+                    // so treating it as barely-acceptable is honest; treating it
+                    // as fully trusted would repeat the exact fabrication this
+                    // fixes. `confidenceGrid` now has its own lock (see that
+                    // type) precisely because this call and `processFrame`'s
+                    // `record` below run on two different queues.
+                    let confidence = confidenceGrid.confidence(at: worldVertex) ?? ProScanConfig.minimumNormalizedConfidence
+                    let classificationRawValue = vertexClassifications[vertexIndex] ?? PointCloudMeshClassification.none.rawValue
+
+                    samples.append(VoxelAccumulator.Sample(
+                        position: worldVertex,
+                        confidence: confidence,
+                        color: color,
+                        normal: worldNormal,
+                        classificationRawValue: classificationRawValue
+                    ))
+                }
             }
-            let colorX = Int((imagePixel.x * colorScaleX).rounded())
-            let colorY = Int((imagePixel.y * colorScaleY).rounded())
-            guard colorX >= 0, colorX < lumaWidth, colorY >= 0, colorY < lumaHeight else {
-                continue
-            }
-
-            let color = Self.sampleColor(
-                lumaBase: lumaBase, lumaBytesPerRow: lumaBytesPerRow,
-                chromaBase: chromaBase, chromaBytesPerRow: chromaBytesPerRow,
-                x: colorX, y: colorY
-            )
-            // Real per-point confidence from the depth pipeline's
-            // observations at this voxel, rather than a fabricated
-            // constant. A voxel the depth pipeline has never sampled (the
-            // fused mesh can extend slightly beyond where raw depth has
-            // landed, especially right after the throttle in `processFrame`
-            // skips a frame) falls back to the *minimum acceptable*
-            // confidence, not the maximum — there's no real signal here,
-            // so treating it as barely-acceptable is honest; treating it
-            // as fully trusted would repeat the exact fabrication this
-            // fixes.
-            let confidence = confidenceGrid.confidence(at: worldVertex) ?? ProScanConfig.minimumNormalizedConfidence
-            let classificationRawValue = vertexClassifications[vertexIndex] ?? PointCloudMeshClassification.none.rawValue
-
-            samples.append(VoxelAccumulator.Sample(
-                position: worldVertex,
-                confidence: confidence,
-                color: color,
-                normal: worldNormal,
-                classificationRawValue: classificationRawValue
-            ))
         }
 
         // Per-anchor storage and the fused accumulator are updated together
@@ -430,8 +563,17 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
 
     /// Unprojects the depth map into world-space points using that frame's
     /// camera intrinsics/transform, keyed against the confidence map.
-    /// Runs entirely on `processingQueue`; the source `ARFrame` is never
-    /// retained past this call, per ARKit's buffer-recycling contract.
+    /// Runs entirely on `delegateQueue`, unlike mesh-anchor processing —
+    /// deliberately not split onto its own queue for this phase: it is
+    /// already throttled to `ProScanConfig.depthSampleHz`, and its
+    /// per-invocation cost (one pass over the depth map at `pixelStride`,
+    /// a few thousand samples at most) is small and bounded compared to a
+    /// mesh chunk's potentially much larger vertex count. If profiling
+    /// (Fase 0 of the architecture audit) later shows this pipeline is
+    /// still a meaningful contributor to delegate-queue latency, the same
+    /// snapshot-and-dispatch pattern `updateMeshAnchors` uses below would
+    /// apply here too. The source `ARFrame` is never retained past this
+    /// call, per ARKit's buffer-recycling contract.
     ///
     /// Coordinate systems: ARKit's camera/world space is right-handed, +Y
     /// up, camera looking down -Z (`ARFrame`/`ARCamera`, Apple's documented
@@ -594,10 +736,16 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
 
     /// BT.601 full-range YCbCr → RGB, sampled at a single luma pixel (and
     /// its corresponding half-resolution chroma pixel).
+    ///
+    /// Read-only pointers: `processFrame` passes pointers sourced from a
+    /// locked `CVPixelBuffer` (an `UnsafeMutableRawPointer` implicitly
+    /// converts at the call site), and `processMeshAnchor` passes pointers
+    /// into a `MeshFrameSnapshot`'s plain `[UInt8]` arrays — neither caller
+    /// needs to mutate through these, so read-only is the honest type.
     private static func sampleColor(
-        lumaBase: UnsafeMutableRawPointer?,
+        lumaBase: UnsafeRawPointer?,
         lumaBytesPerRow: Int,
-        chromaBase: UnsafeMutableRawPointer?,
+        chromaBase: UnsafeRawPointer?,
         chromaBytesPerRow: Int,
         x: Int,
         y: Int
@@ -679,18 +827,42 @@ extension ARPointCloudSession: ARSessionDelegate {
         updateMeshAnchors(anchors, session: session)
     }
 
+    /// Dispatched onto `meshProcessingQueue`, not applied inline here —
+    /// even though `meshLock` would already make the mutation itself
+    /// memory-safe from any queue. The reason is ordering, not safety: a
+    /// `didUpdate` for some anchor may still be *queued* (not yet run) on
+    /// `meshProcessingQueue` when its later `didRemove` arrives here on
+    /// `delegateQueue`. Applying the removal immediately, on this queue,
+    /// could run it before that queued update — which would then wrongly
+    /// resurrect the anchor's data once it finally executes. Dispatching
+    /// both onto the same serial queue, in the order ARKit invoked them,
+    /// is what keeps add/update/remove for one anchor identifier correctly
+    /// ordered relative to each other.
     func session(_ session: ARSession, didRemove anchors: [ARAnchor]) {
-        guard anchors.contains(where: { $0 is ARMeshAnchor }) else { return }
-        meshLock.lock()
-        for anchor in anchors {
-            if let removed = meshPointsByAnchor.removeValue(forKey: anchor.identifier) {
-                fusedAccumulator.remove(contentsOf: removed)
-                meshPointCountTotal -= removed.count
+        let removedIdentifiers = anchors.compactMap { ($0 as? ARMeshAnchor)?.identifier }
+        guard !removedIdentifiers.isEmpty else { return }
+        meshProcessingQueue.async { [weak self] in
+            guard let self else { return }
+            self.meshLock.lock()
+            for identifier in removedIdentifiers {
+                if let removed = self.meshPointsByAnchor.removeValue(forKey: identifier) {
+                    self.fusedAccumulator.remove(contentsOf: removed)
+                    self.meshPointCountTotal -= removed.count
+                }
             }
+            self.meshLock.unlock()
         }
-        meshLock.unlock()
     }
 
+    /// Runs on `delegateQueue`. Evaluates every guard synchronously — same
+    /// as before this phase — so a scan that's budget-exceeded, tracking
+    /// unreliably, or mid-relocalization never even pays for a frame
+    /// snapshot, let alone a queue hop. Only once every guard passes does
+    /// this copy the frame's color image (`makeMeshFrameSnapshot`, the one
+    /// piece of frame-scoped data mesh processing cannot safely read
+    /// later) and dispatch the actual per-vertex work onto
+    /// `meshProcessingQueue` — see that property's doc comment for why
+    /// this split exists at all (audit finding C4).
     private func updateMeshAnchors(_ anchors: [ARAnchor], session: ARSession) {
         guard let frame = session.currentFrame else { return }
         // Same reasoning as `processFrame`'s tracking-state gate: a mesh
@@ -707,9 +879,16 @@ extension ARPointCloudSession: ARSessionDelegate {
         // very large or very long scan degrades gracefully instead of
         // growing memory use without bound.
         guard !ProScanConfig.isMeshPointBudgetExceeded(currentCount: currentMeshPointCount()) else { return }
-        for anchor in anchors {
-            guard let meshAnchor = anchor as? ARMeshAnchor else { continue }
-            processMeshAnchor(meshAnchor, frame: frame)
+
+        let meshAnchors = anchors.compactMap { $0 as? ARMeshAnchor }
+        guard !meshAnchors.isEmpty else { return }
+        guard let snapshot = Self.makeMeshFrameSnapshot(from: frame) else { return }
+
+        meshProcessingQueue.async { [weak self] in
+            guard let self else { return }
+            for anchor in meshAnchors {
+                self.processMeshAnchor(anchor, frame: snapshot)
+            }
         }
     }
 

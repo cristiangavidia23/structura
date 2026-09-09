@@ -7,15 +7,19 @@ import simd
 /// confidence instead of the placeholder `1.0` the Pro Scan audit flagged
 /// as a critical finding.
 ///
-/// Not an `actor`: every call into this type happens synchronously from
-/// `ARPointCloudSession`'s `ARSessionDelegate` callbacks, which ARKit always
-/// invokes one at a time, in order, on the same serial `processingQueue` —
-/// so a plain class is already safe here with zero extra synchronization.
-/// Wrapping this in an actor would force `Task { await ... }` boundaries
-/// between callers that today are guaranteed to run in strict call order —
-/// a fire-and-forget `Task` does not guarantee it completes before the very
-/// next delegate callback fires, which would be a correctness regression,
-/// not an improvement.
+/// # Locked, not queue-confined (Fase 1 of the architecture audit)
+///
+/// This type used to rely entirely on both call sites running on the same
+/// serial queue, with no lock of its own. That stopped being true once
+/// mesh-anchor processing moved to its own `meshProcessingQueue`, separate
+/// from the queue `processFrame` runs on (see `ARPointCloudSession
+/// .meshProcessingQueue`'s doc comment, audit finding C4): `record` and
+/// `confidence(at:)`/`reset()` are now genuinely called from two different
+/// queues, concurrently. An `NSLock` around every access — matching the
+/// pattern `ARPointCloudSession.meshLock` already uses — is what keeps that
+/// safe, at the cost of one lock/unlock per call. That cost is small next
+/// to what it protects: a single-cell dictionary read or a scalar-sum
+/// update, not a loop.
 ///
 /// Pure Swift/simd, no ARKit dependency — like `ProScanConfig` and
 /// `CameraUnprojection`, so it compiles into the host-less `StructuraTests`
@@ -30,10 +34,13 @@ final class ConfidenceGrid {
         }
     }
 
+    private let lock = NSLock()
     private var cells: [Int64: Cell] = [:]
 
     func reset() {
+        lock.lock()
         cells.removeAll(keepingCapacity: false)
+        lock.unlock()
     }
 
     /// Folds one observed sample — a real per-frame depth reading's
@@ -41,21 +48,30 @@ final class ConfidenceGrid {
     /// voxel's running average.
     func record(position: SIMD3<Float>, confidence: Float) {
         let key = Self.voxelKey(for: position)
+        lock.lock()
         var cell = cells[key] ?? Cell()
         cell.confidenceSum += confidence
         cell.observationCount += 1
         cells[key] = cell
+        lock.unlock()
     }
 
     /// The averaged confidence at the voxel containing `position`, or `nil`
     /// if the depth pipeline has never observed that voxel.
     func confidence(at position: SIMD3<Float>) -> Float? {
-        guard let cell = cells[Self.voxelKey(for: position)], cell.observationCount > 0 else { return nil }
+        let key = Self.voxelKey(for: position)
+        lock.lock()
+        defer { lock.unlock() }
+        guard let cell = cells[key], cell.observationCount > 0 else { return nil }
         return cell.averageConfidence
     }
 
     /// Number of distinct voxels observed so far — a coverage signal.
-    var observedVoxelCount: Int { cells.count }
+    var observedVoxelCount: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return cells.count
+    }
 
     /// Packs a world-space position into a voxel-grid cell key, at
     /// `ProScanConfig.voxelSizeMeters` resolution. Matches the packing

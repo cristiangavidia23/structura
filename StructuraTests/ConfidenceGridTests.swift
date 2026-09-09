@@ -57,6 +57,44 @@ final class ConfidenceGridTests: XCTestCase {
         XCTAssertEqual(grid.observedVoxelCount, 2)
     }
 
+    // MARK: - Thread-safety (Fase 1: audit finding C4's consequence for this type)
+
+    /// `record` is called from `ARPointCloudSession.processFrame`'s queue
+    /// and `confidence(at:)` from `processMeshAnchor`'s — two different
+    /// queues since Fase 1 split mesh processing off the delegate queue.
+    /// This doesn't prove the absence of every possible race, but it does
+    /// exercise the lock under real concurrent pressure: without it (or
+    /// with it implemented wrong), an unsynchronized read-modify-write on
+    /// `cells[key]` would be expected to lose some observations under this
+    /// much contention, not just occasionally skew the average slightly.
+    func testConcurrentRecordsFromMultipleQueuesDoNotLoseObservations() {
+        let grid = ConfidenceGrid()
+        let position = SIMD3<Float>(3, 3, 3)
+        let iterationsPerQueue = 500
+
+        let queueA = DispatchQueue(label: "test.confidencegrid.a")
+        let queueB = DispatchQueue(label: "test.confidencegrid.b")
+        let group = DispatchGroup()
+
+        group.enter()
+        queueA.async {
+            for _ in 0..<iterationsPerQueue { grid.record(position: position, confidence: 1.0) }
+            group.leave()
+        }
+        group.enter()
+        queueB.async {
+            for _ in 0..<iterationsPerQueue { grid.record(position: position, confidence: 0.0) }
+            group.leave()
+        }
+        group.wait()
+
+        // Every observation landed — none lost to an unsynchronized
+        // read-modify-write — so the average must be exactly the midpoint
+        // regardless of how the two queues interleaved.
+        let confidence = grid.confidence(at: position)
+        XCTAssertEqual(confidence, 0.5, accuracy: 0.0001)
+    }
+
     // MARK: - Voxel hashing
 
     func testVoxelKeyGroupsPositionsWithinTheSameCell() {
