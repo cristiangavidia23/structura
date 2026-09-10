@@ -21,7 +21,18 @@ final class PurchaseManager: NSObject, ObservableObject {
     /// sandbox purchase history in RevenueCat, so the app adapts instead.
     private static let entitlementIDs = ["Structura Semanal", "Structura Anual"]
 
-    @Published private(set) var isPremium = false
+    /// Local development override: bypasses every `purchases.isPremium`
+    /// check in the app (there's exactly one functional gate —
+    /// `HomeView`'s free-scan-count check — plus a couple of purely
+    /// cosmetic "Premium"/"Gratis" labels in `SettingsView`) without
+    /// touching the RevenueCat wiring itself, so flipping this back to
+    /// `false` restores the real paywall exactly as it was. **Set this
+    /// back to `false` before shipping any build a real user could
+    /// install** — this is a deliberate testing-only bypass, not a real
+    /// entitlement, and ships premium features free to everyone while `true`.
+    static let isPaywallDisabledForTesting = true
+
+    @Published private(set) var isPremium = isPaywallDisabledForTesting
     @Published private(set) var offering: Offering?
     /// Set whenever `loadOfferings` fails or succeeds with no current offering —
     /// surfaced in the paywall instead of leaving it spinning forever with no
@@ -78,6 +89,10 @@ final class PurchaseManager: NSObject, ObservableObject {
     }
 
     private func apply(_ info: CustomerInfo) {
+        guard !Self.isPaywallDisabledForTesting else {
+            isPremium = true
+            return
+        }
         isPremium = Self.entitlementIDs.contains { info.entitlements[$0]?.isActive == true }
     }
 }
