@@ -268,7 +268,7 @@ struct ResultView: View {
     private var content: some View {
         #if DEBUG
         if mode == .experimentalPlan, let plyURL = store.plyURL(for: currentScan) {
-            PointCloudFloorPlanDebugView(plyURL: plyURL)
+            PointCloudFloorPlanDebugView(plyURL: plyURL, reference: plan)
                 .transition(.opacity.combined(with: .scale(scale: 0.97)))
                 .id(mode)
         } else {

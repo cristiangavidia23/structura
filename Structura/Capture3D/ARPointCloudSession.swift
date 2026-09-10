@@ -1036,32 +1036,30 @@ extension ARPointCloudSession: ARSessionDelegate {
         updateMeshAnchors(anchors, session: session)
     }
 
-    /// Dispatched onto `meshProcessingQueue`, not applied inline here —
-    /// even though `meshLock` would already make the mutation itself
-    /// memory-safe from any queue. The reason is ordering, not safety: a
-    /// `didUpdate` for some anchor may still be *queued* (not yet run) on
-    /// `meshProcessingQueue` when its later `didRemove` arrives here on
-    /// `delegateQueue`. Applying the removal immediately, on this queue,
-    /// could run it before that queued update — which would then wrongly
-    /// resurrect the anchor's data once it finally executes. Dispatching
-    /// both onto the same serial queue, in the order ARKit invoked them,
-    /// is what keeps add/update/remove for one anchor identifier correctly
-    /// ordered relative to each other.
-    func session(_ session: ARSession, didRemove anchors: [ARAnchor]) {
-        let removedIdentifiers = anchors.compactMap { ($0 as? ARMeshAnchor)?.identifier }
-        guard !removedIdentifiers.isEmpty else { return }
-        meshProcessingQueue.async { [weak self] in
-            guard let self else { return }
-            self.meshLock.lock()
-            for identifier in removedIdentifiers {
-                if let removed = self.meshPointsByAnchor.removeValue(forKey: identifier) {
-                    self.fusedAccumulator.remove(contentsOf: removed)
-                    self.meshPointCountTotal -= removed.count
-                }
-            }
-            self.meshLock.unlock()
-        }
-    }
+    /// Deliberately keeps everything the removed anchor contributed.
+    ///
+    /// This used to delete those points, which quietly made Pro Scan a
+    /// *sliding window* instead of a scan: ARKit's scene reconstruction only
+    /// maintains mesh anchors for the region around the device, and removes
+    /// them as you walk away from what they cover. Deleting on removal
+    /// therefore threw away the earlier half of every walked scan — a 61 s
+    /// pass exported ~10 k points where a 13 s pass from one spot exported
+    /// ~17 k, and what survived was only whatever had been scanned last.
+    ///
+    /// A removal means ARKit stopped tracking that chunk, not that the
+    /// surface was never observed: the samples were measured, reprojected
+    /// under reliable tracking, and are as real as any other. Re-walking an
+    /// area is safe too — the returning anchors are new identifiers, and
+    /// `VoxelAccumulator` fuses their samples into the same voxels rather
+    /// than stacking duplicates.
+    ///
+    /// Unbounded growth is already handled where it belongs, by
+    /// `ProScanConfig.maximumMeshPointBudget` in `updateMeshAnchors`, which
+    /// stops *further* ingestion instead of discarding what's captured.
+    ///
+    /// Retriangulation of a still-live anchor is a different case and still
+    /// replaces that anchor's own contribution — see `processMeshAnchor`.
+    func session(_ session: ARSession, didRemove anchors: [ARAnchor]) {}
 
     /// Runs on `delegateQueue`. Evaluates every guard synchronously — same
     /// as before this phase — so a scan that's budget-exceeded, tracking

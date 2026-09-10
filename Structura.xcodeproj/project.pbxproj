@@ -21,6 +21,7 @@
 		1BC6DD4B091DD660414A23C6 /* ControlPointTransformTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 037614FED6FB7CDAAEE397A2 /* ControlPointTransformTests.swift */; };
 		1E6C2571FC8EF3AD73DC7704 /* MeasurementSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA100951FD632BFEE1AF830D /* MeasurementSession.swift */; };
 		1F0DD5C8AFD027A0DBDD4756 /* HapticEngineManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AADD895A7BB9CAF51FA98FA /* HapticEngineManager.swift */; };
+		2285404AC3429D18D4FCF7D1 /* FloorPlanRegistration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B11A1DDE5FC11D043220B03C /* FloorPlanRegistration.swift */; };
 		242D1B00C0CB926622D52B4F /* ProScanConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 271F2E919186953521F31505 /* ProScanConfig.swift */; };
 		25222D3D9AE1FED8041A17B1 /* PointCloudFloorPlanBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C98F5A34C84871640FB1C4 /* PointCloudFloorPlanBuilderTests.swift */; };
 		2830507F17C08E68985794C2 /* DelegateFrameMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8700A58F5CFC13210FA72D2A /* DelegateFrameMetrics.swift */; };
@@ -49,6 +50,7 @@
 		53EF0C7BD4BAF1B0584B2856 /* PLYPointCloudReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E579F3F6F700D7CBA583130B /* PLYPointCloudReader.swift */; };
 		540E4E05FC31D406F8BDC7A6 /* FloorPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7ACE7847F9A758B78A183FD /* FloorPlanView.swift */; };
 		568BD69819C863FE264B56B9 /* BlueprintBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B01C9230240DE02C68C495B /* BlueprintBackdrop.swift */; };
+		58E1A30A8D70DB236AB13DAC /* FloorPlanRegistrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57D3A6FD72ECD1414D454478 /* FloorPlanRegistrationTests.swift */; };
 		5AF58793170F18DF68ABE9A7 /* PlaneSnapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA8E155518A8EE8202AB3A05 /* PlaneSnapping.swift */; };
 		5B832F4D8AC146DCEF4A83A2 /* StructuraApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FE458FE3C3369BCAE73208A /* StructuraApp.swift */; };
 		5BC68535CDF6301F9C13A683 /* ProScanConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 271F2E919186953521F31505 /* ProScanConfig.swift */; };
@@ -117,6 +119,7 @@
 		E8646A4C4193364906670CDD /* RoomCaptureRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = E78D94B24D2AB18DA74DD4D3 /* RoomCaptureRepresentable.swift */; };
 		EC6B4FD1E91A04911C370B23 /* ScanRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F1DB39A49C2AFE040165840 /* ScanRecord.swift */; };
 		F40F67FAC6756A4521982309 /* UnitSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 731115085003FD13639169C5 /* UnitSystem.swift */; };
+		FA7C5B718BBCF3BCA6929CBF /* FloorPlanRegistration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B11A1DDE5FC11D043220B03C /* FloorPlanRegistration.swift */; };
 		FB7495B1C3F63F263082EA57 /* ARSessionStartupPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0705ED6E4A2189A6D95E362 /* ARSessionStartupPolicyTests.swift */; };
 		FDFD28C2A9FBB9D5BC2E4192 /* PointCloudStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF8E4841A5F15A6CB6B38DDE /* PointCloudStore.swift */; };
 		FE55D3D70FA10961CE5E483B /* PointCloudFloorPlanBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F54FCACA0D99205892F2AB0 /* PointCloudFloorPlanBuilder.swift */; };
@@ -155,6 +158,7 @@
 		39CCA3B1E575B48104612FDB /* TopographicAxisConvention.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopographicAxisConvention.swift; sourceTree = "<group>"; };
 		39D1DE8273E831A410C07DEA /* VoxelAccumulatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoxelAccumulatorTests.swift; sourceTree = "<group>"; };
 		3E24924C76C28845B801B82C /* Structura.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Structura.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		57D3A6FD72ECD1414D454478 /* FloorPlanRegistrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorPlanRegistrationTests.swift; sourceTree = "<group>"; };
 		58CEB5451F53B00528AC8C95 /* PLYExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PLYExporter.swift; sourceTree = "<group>"; };
 		591BEB81B6DEF966A5F214F2 /* DelegateFrameMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DelegateFrameMetricsTests.swift; sourceTree = "<group>"; };
 		5FE7635358A11CE8711970B5 /* VoxelAccumulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoxelAccumulator.swift; sourceTree = "<group>"; };
@@ -186,6 +190,7 @@
 		AB5CFCB33DF6220B9E48589B /* CameraUnprojectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraUnprojectionTests.swift; sourceTree = "<group>"; };
 		AC9C883EE708825A3774130C /* ScanDriftBudget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanDriftBudget.swift; sourceTree = "<group>"; };
 		AF486840EB9B88C63E71B382 /* ARSessionStartupPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARSessionStartupPolicy.swift; sourceTree = "<group>"; };
+		B11A1DDE5FC11D043220B03C /* FloorPlanRegistration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorPlanRegistration.swift; sourceTree = "<group>"; };
 		B3A12DC99636CDF75B52D77B /* ScanCoverageEstimatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanCoverageEstimatorTests.swift; sourceTree = "<group>"; };
 		B5E80BEB0CB670FA03A6DACB /* ScanMetadataReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanMetadataReport.swift; sourceTree = "<group>"; };
 		B7729D532E4D0E3C98E539BC /* LegalLinks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalLinks.swift; sourceTree = "<group>"; };
@@ -394,6 +399,7 @@
 				D3154D5AD72B0748B64663A4 /* ConfidenceGridTests.swift */,
 				037614FED6FB7CDAAEE397A2 /* ControlPointTransformTests.swift */,
 				591BEB81B6DEF966A5F214F2 /* DelegateFrameMetricsTests.swift */,
+				57D3A6FD72ECD1414D454478 /* FloorPlanRegistrationTests.swift */,
 				2D90AF1927E076EB7FF58516 /* LASExporterTests.swift */,
 				974B4A9218725836CE01FD19 /* MeasurementCalibrationTests.swift */,
 				F054DFD72611CCD8A73FD833 /* PlaneSnappingTests.swift */,
@@ -446,6 +452,7 @@
 			isa = PBXGroup;
 			children = (
 				6B9B861B85EFC434FDBFAFAC /* DollhouseSceneView.swift */,
+				B11A1DDE5FC11D043220B03C /* FloorPlanRegistration.swift */,
 				D7ACE7847F9A758B78A183FD /* FloorPlanView.swift */,
 				0B72DFFFFE3FDB6E4726DB26 /* MeasurementCalibration.swift */,
 				FA100951FD632BFEE1AF830D /* MeasurementSession.swift */,
@@ -571,6 +578,8 @@
 				1BC6DD4B091DD660414A23C6 /* ControlPointTransformTests.swift in Sources */,
 				2830507F17C08E68985794C2 /* DelegateFrameMetrics.swift in Sources */,
 				E19F93C3F6BB43BFC94359D1 /* DelegateFrameMetricsTests.swift in Sources */,
+				FA7C5B718BBCF3BCA6929CBF /* FloorPlanRegistration.swift in Sources */,
+				58E1A30A8D70DB236AB13DAC /* FloorPlanRegistrationTests.swift in Sources */,
 				C37E083C998838898C4C8A6C /* LASExporter.swift in Sources */,
 				10DF4B8B1D8AF3C71F78E963 /* LASExporterTests.swift in Sources */,
 				D7D5FA1CDA08E28E9205B640 /* LocalEngineeringCRS.swift in Sources */,
@@ -624,6 +633,7 @@
 				95AD81FBF96001C01C86D5F4 /* DelegateFrameMetrics.swift in Sources */,
 				4788EC9B50127DCD5BD71B88 /* DollhouseSceneView.swift in Sources */,
 				9D6E08814FE36A6948F9D9A8 /* FloorPlan.swift in Sources */,
+				2285404AC3429D18D4FCF7D1 /* FloorPlanRegistration.swift in Sources */,
 				540E4E05FC31D406F8BDC7A6 /* FloorPlanView.swift in Sources */,
 				AC50D05314996DB730303611 /* FrameGate.swift in Sources */,
 				49B7CB83FFF47DE920E7F834 /* GraphPaperBackground.swift in Sources */,
