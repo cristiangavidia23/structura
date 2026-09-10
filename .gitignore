@@ -18,3 +18,16 @@ DerivedData/
 
 # macOS
 .DS_Store
+
+# Fastlane — secretos y artefactos locales. `fastlane/.env.default`,
+# `fastlane/Appfile` y `fastlane/Fastfile` sí se commitean (no tienen
+# secretos); todo lo de acá abajo es por-máquina o generado en cada corrida.
+fastlane/.env
+fastlane/report.xml
+fastlane/test_output/
+fastlane/README.md
+build/
+
+# Bundler
+.bundle/
+vendor/bundle/

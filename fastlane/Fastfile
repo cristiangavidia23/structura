@@ -1,0 +1,212 @@
+default_platform(:ios)
+
+# Nombre del scheme y de la carpeta de salida — un solo lugar para
+# cambiarlos si alguna vez se renombra el proyecto.
+SCHEME = "Structura"
+XCODEPROJ = "Structura.xcodeproj"
+BUILD_OUTPUT_DIRECTORY = "build"
+
+# Ruta al archivo que contiene el interruptor de paywall de desarrollo —
+# usada por `verify_release_readiness` para asegurarse de que nunca llegue
+# `true` a una build que un revisor de Apple o un tester real pueda instalar.
+PAYWALL_BYPASS_FILE = "Structura/Purchases/PurchaseManager.swift"
+
+platform :ios do
+
+  # ============================================================
+  # Lanes públicos
+  # ============================================================
+
+  desc "Corre la suite completa de StructuraTests en el simulador."
+  desc "Es el mismo paso que `beta` exige antes de compilar — expuesto"
+  desc "aparte para poder correrlo solo, por ejemplo desde CI en cada PR."
+  lane :tests do
+    run_test_suite
+  end
+
+  desc "Compila, firma y empaqueta un .ipa de Structura listo para subir a TestFlight."
+  desc ""
+  desc "Este lane NO sube nada a App Store Connect — solo deja el .ipa listo"
+  desc "en `#{BUILD_OUTPUT_DIRECTORY}/`. Para subirlo, correr `fastlane upload_beta`"
+  desc "por separado (ver ese lane más abajo) una vez que el .ipa se revisó."
+  desc ""
+  desc "Orden de los pasos, y por qué en ese orden:"
+  desc "  1. verify_release_readiness — antes que nada: si algo bloqueante"
+  desc "     está mal (el bypass de paywall, por ejemplo), no tiene sentido"
+  desc "     ni gastar tiempo corriendo tests ni compilando."
+  desc "  2. xcodegen generate — project.yml es la fuente de verdad; el"
+  desc "     .xcodeproj que se compila debe ser el que ese archivo describe"
+  desc "     en este momento, no una versión desactualizada."
+  desc "  3. tests — StructuraTests corre obligatoriamente antes de"
+  desc "     cualquier build de beta. Si falla un test, el lane se detiene"
+  desc "     acá: nunca se llega a firmar ni a subir un número de build."
+  desc "  4. número de build — se decide después de los tests, no antes,"
+  desc "     para no gastar (ni pedir) un número de build de un intento que"
+  desc "     iba a fallar de todas formas."
+  desc "  5. build_app (gym) — compila, firma y exporta el .ipa."
+  lane :beta do
+    verify_release_readiness
+    xcodegen_regenerate
+    run_test_suite
+
+    build_number = next_build_number
+    increment_build_number(
+      build_number: build_number,
+      xcodeproj: XCODEPROJ
+    )
+    UI.success("Número de build para esta beta: #{build_number}")
+
+    build_app(
+      scheme: SCHEME,
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: BUILD_OUTPUT_DIRECTORY,
+      output_name: "Structura.ipa",
+      clean: true,
+      # Firma automática (CODE_SIGN_STYLE: Automatic en project.yml, igual
+      # que se usó para instalar directo en dispositivo durante esta misma
+      # sesión de trabajo) — este flag es el que le permite a Xcode
+      # renovar/crear el perfil de distribución de App Store si hace falta,
+      # en vez de fallar pidiendo que se haga a mano en la app Xcode.
+      xcargs: "-allowProvisioningUpdates"
+    )
+
+    UI.success("Listo: #{BUILD_OUTPUT_DIRECTORY}/Structura.ipa (build #{build_number}). " \
+      "Revisalo y, cuando estés conforme, corré `fastlane upload_beta` para subirlo a TestFlight.")
+  end
+
+  desc "Sube a TestFlight el .ipa que dejó `fastlane beta` en `#{BUILD_OUTPUT_DIRECTORY}/`."
+  desc ""
+  desc "Lane separado a propósito, no un paso automático dentro de `beta`:"
+  desc "subir a TestFlight pone la build en manos de testers reales — es una"
+  desc "acción visible hacia afuera, así que queda como un segundo comando"
+  desc "explícito en vez de dispararse solo porque `beta` terminó sin errores."
+  desc ""
+  desc "Necesita la App Store Connect API key configurada (ver"
+  desc "`fastlane/.env.default` para las variables de entorno esperadas)."
+  lane :upload_beta do
+    ipa_path = File.join(BUILD_OUTPUT_DIRECTORY, "Structura.ipa")
+    unless File.exist?(ipa_path)
+      UI.user_error!("No se encontró #{ipa_path}. Corré `fastlane beta` primero.")
+    end
+
+    setup_app_store_connect_api_key_if_available
+
+    upload_to_testflight(
+      ipa: ipa_path,
+      skip_waiting_for_build_processing: true,
+      distribute_external: false
+    )
+  end
+
+  desc "Verificación de guardarraíles de una build lista para distribuirse,"
+  desc "sin compilar nada — útil para correr sola antes de empezar."
+  lane :verify_release_readiness do
+    ensure_paywall_bypass_is_off
+    UI.success("Listo para preparar una build de distribución.")
+  end
+
+  # ============================================================
+  # Lanes privados (pasos internos, no pensados para invocarse directo)
+  # ============================================================
+
+  private_lane :xcodegen_regenerate do
+    UI.message("Regenerando Structura.xcodeproj desde project.yml (xcodegen es la fuente de verdad)…")
+    sh("cd .. && xcodegen generate")
+  end
+
+  private_lane :run_test_suite do
+    scan(
+      scheme: SCHEME,
+      # Nombre de dispositivo, no UDID: un UDID es específico de la Mac
+      # donde se generó y no es portable a otra máquina ni a CI. Si este
+      # simulador no existe en la máquina que corre el lane, correr
+      # `xcrun simctl list devices available` y ajustar el nombre acá.
+      devices: ["iPhone 17 Pro"],
+      only_testing: ["StructuraTests"],
+      clean: true
+    )
+  end
+
+  # `StructuraTests` es un target sin host de app — no necesita
+  # `arkit`/`lidar`, por eso puede correr en el Simulator aunque
+  # `Structura` (la app en sí) no pueda instalarse ahí.
+
+  private_lane :ensure_paywall_bypass_is_off do
+    contents = File.read(File.join("..", PAYWALL_BYPASS_FILE))
+    unless contents =~ /static let isPaywallDisabledForTesting = (true|false)/
+      UI.user_error!(
+        "No se pudo verificar el interruptor de paywall en #{PAYWALL_BYPASS_FILE} " \
+        "(el patrón esperado no se encontró — ¿cambió el nombre o la forma de declararlo?). " \
+        "Revisalo a mano antes de continuar."
+      )
+    end
+
+    if $1 == "true"
+      UI.user_error!(
+        "PurchaseManager.isPaywallDisabledForTesting está en `true`. " \
+        "Con esto activo, CUALQUIER build de distribución (TestFlight o App Store, " \
+        "incluida la que reciben los revisores de Apple) desbloquea premium gratis " \
+        "para todo el mundo. Volvelo a `false` en #{PAYWALL_BYPASS_FILE} antes de " \
+        "compilar una beta."
+      )
+    end
+
+    UI.success("Paywall real activo (isPaywallDisabledForTesting = false). ✓")
+  end
+
+  # El número de build para TestFlight tiene que ser mayor al último que
+  # App Store Connect ya vio para este mismo `app_identifier` — repetir uno
+  # anterior hace que `upload_to_testflight` lo rechace. Con la API key de
+  # App Store Connect configurada, se consulta ese número real y se suma 1;
+  # sin ella (placeholder todavía sin completar — ver
+  # `fastlane/.env.default`), se cae a un incremento local sobre
+  # `CURRENT_PROJECT_VERSION`, que sirve para armar y firmar el .ipa pero
+  # NO garantiza estar por encima de lo que ya haya en App Store Connect
+  # — confirmar el número a mano antes de `upload_beta` en ese caso.
+  private_lane :next_build_number do
+    if setup_app_store_connect_api_key_if_available
+      begin
+        app_identifier = ENV["STRUCTURA_APP_IDENTIFIER"].to_s.empty? ? "com.cristiangavidia.structura" : ENV["STRUCTURA_APP_IDENTIFIER"]
+        latest = latest_testflight_build_number(app_identifier: app_identifier)
+        next latest + 1
+      rescue => error
+        UI.important("No se pudo consultar el último build number en App Store Connect (#{error.message}). Seguimos con un incremento local.")
+      end
+    else
+      UI.important(
+        "No hay App Store Connect API key configurada todavía (ver fastlane/.env.default) — " \
+        "usando un incremento local del build number. Verificá a mano que sea mayor que el " \
+        "último subido a TestFlight antes de `upload_beta`."
+      )
+    end
+
+    current = get_build_number(xcodeproj: XCODEPROJ)
+    current.to_i + 1
+  end
+
+  # Configura la API key de App Store Connect a partir de variables de
+  # entorno si están presentes; devuelve `true`/`false` según haya podido
+  # configurarla, sin hacer fallar el lane si faltan — así `beta` sigue
+  # siendo utilizable (con el incremento local de build number como
+  # respaldo) mientras la key todavía no está cargada.
+  private_lane :setup_app_store_connect_api_key_if_available do
+    key_id = ENV["STRUCTURA_ASC_KEY_ID"]
+    issuer_id = ENV["STRUCTURA_ASC_ISSUER_ID"]
+    key_filepath = ENV["STRUCTURA_ASC_KEY_FILEPATH"]
+
+    # `.to_s.empty?`, no `.nil?`: fastlane/.env.default se commitea con
+    # estas variables presentes pero vacías, así que "vacío" es el caso
+    # normal hasta que alguien complete fastlane/.env — un string vacío no
+    # es nil, así que .nil? por sí solo dejaría pasar valores en blanco.
+    next false if key_id.to_s.empty? || issuer_id.to_s.empty? || key_filepath.to_s.empty?
+
+    app_store_connect_api_key(
+      key_id: key_id,
+      issuer_id: issuer_id,
+      key_filepath: key_filepath
+    )
+    true
+  end
+
+end

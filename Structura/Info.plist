@@ -15,9 +15,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
+	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Structura usa la cámara junto con el sensor LiDAR para escanear tu ambiente y generar el plano 2D acotado y el modelo 3D.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

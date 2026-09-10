@@ -22,15 +22,17 @@ final class PurchaseManager: NSObject, ObservableObject {
     private static let entitlementIDs = ["Structura Semanal", "Structura Anual"]
 
     /// Local development override: bypasses every `purchases.isPremium`
-    /// check in the app (there's exactly one functional gate —
-    /// `HomeView`'s free-scan-count check — plus a couple of purely
-    /// cosmetic "Premium"/"Gratis" labels in `SettingsView`) without
+    /// check in the app (`HomeView`'s free-scan-count gate,
+    /// `ResultView.exportOrPaywall`'s per-export gate, plus a couple of
+    /// purely cosmetic "Premium"/"Gratis" labels in `SettingsView`) without
     /// touching the RevenueCat wiring itself, so flipping this back to
-    /// `false` restores the real paywall exactly as it was. **Set this
-    /// back to `false` before shipping any build a real user could
-    /// install** — this is a deliberate testing-only bypass, not a real
-    /// entitlement, and ships premium features free to everyone while `true`.
-    static let isPaywallDisabledForTesting = true
+    /// `false` restores the real paywall exactly as it was.
+    ///
+    /// Set back to `false` on 2026-09-10, ahead of the first TestFlight
+    /// build — the `verify_release_readiness` lane in `fastlane/Fastfile`
+    /// now fails the build if this is ever `true` again, so this can't ship
+    /// by accident a second time.
+    static let isPaywallDisabledForTesting = false
 
     @Published private(set) var isPremium = isPaywallDisabledForTesting
     @Published private(set) var offering: Offering?

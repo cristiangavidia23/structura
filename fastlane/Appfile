@@ -1,0 +1,31 @@
+# Configuración compartida por todos los lanes. Nada de esto es secreto —
+# el bundle ID y el team ID de Xcode ya son públicos en cualquier IPA
+# firmado — pero sí es sensible al entorno, así que cada valor puede venir
+# sobreescrito por variable de entorno sin tocar este archivo.
+
+# Debe coincidir siempre con `PRODUCT_BUNDLE_IDENTIFIER` en project.yml.
+# `||` no alcanza acá: una variable definida pero vacía (como la deja
+# fastlane/.env.default, que sí se commitea) es un string vacío, y en Ruby
+# un string vacío es "truthy" — así que `ENV[...] || valor_por_defecto` la
+# tomaría como presente y usaría "" en vez del bundle ID real.
+app_identifier(ENV["STRUCTURA_APP_IDENTIFIER"].to_s.empty? ? "com.cristiangavidia.structura" : ENV["STRUCTURA_APP_IDENTIFIER"])
+
+# Apple ID (el correo con el que se inicia sesión en developer.apple.com /
+# App Store Connect) — no está fijado en el repo a propósito. Fastlane lo
+# pide de forma interactiva si falta, o se puede exportar como variable de
+# entorno antes de correr un lane:
+#   export STRUCTURA_APPLE_ID="tu-correo@ejemplo.com"
+apple_id(ENV["STRUCTURA_APPLE_ID"]) unless ENV["STRUCTURA_APPLE_ID"].to_s.empty?
+
+# Team ID de Xcode (Apple Developer Program) — coincide con `DEVELOPMENT_TEAM`
+# en project.yml. Ya lo tenemos: WREX368LLS.
+team_id("WREX368LLS")
+
+# Team ID de App Store Connect (distinto del de Xcode si la cuenta
+# pertenece a más de un equipo — para una cuenta individual suelen
+# coincidir, pero no siempre). Necesario para `upload_to_testflight` y
+# `latest_testflight_build_number`. Completar cuando se tenga a mano
+# (App Store Connect → Users and Access → esquina superior derecha, o
+# `fastlane produce -u tu-correo@ejemplo.com` lo puede listar):
+#   export STRUCTURA_ITC_TEAM_ID="123456789"
+itc_team_id(ENV["STRUCTURA_ITC_TEAM_ID"]) unless ENV["STRUCTURA_ITC_TEAM_ID"].to_s.empty?
