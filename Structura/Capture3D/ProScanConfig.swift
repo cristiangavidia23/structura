@@ -168,10 +168,12 @@ enum ProScanConfig {
     /// mesh updates rather than growing without bound. This is a simple
     /// fixed budget, not a real-time memory-pressure calculation against
     /// `os_proc_available_memory()` — an honest placeholder pending real
-    /// on-device profiling of how many points a scan can hold before the
-    /// export pipeline (which builds the whole file in memory — see the
-    /// Pro Scan audit's finding on `PLYExporter`/`LASExporter`) becomes a
-    /// problem. Treat this number as provisional.
+    /// on-device profiling of how many points a scan can hold before memory
+    /// becomes a problem. The export pipeline is no longer that limit:
+    /// `PLYExporter` and `LASExporter` both stream to disk in batches now
+    /// (the audit's finding that they assembled whole files in memory has
+    /// been resolved), so what this budget bounds is the accumulated cloud
+    /// itself. Treat this number as provisional.
     static let maximumMeshPointBudget: Int = 4_000_000
 
     static func isMeshPointBudgetExceeded(currentCount: Int) -> Bool {

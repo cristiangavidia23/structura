@@ -20,6 +20,14 @@ import simd
 struct PointCloudSceneView: UIViewRepresentable {
     let points: [PointCloudExportPoint]
     @ObservedObject var measurement: MeasurementSession
+    /// Measured off the same cloud; drives the reference grid's extent.
+    /// `nil` simply means no grid layer is available to show.
+    var statistics: PointCloudStatistics.Report?
+    var showsReferenceGrid = false
+    /// Multiplies the physically-derived point size — see
+    /// `SceneBuilder.pointSize(forMultiplier:)`. 1 keeps points at roughly
+    /// the cloud's own sample spacing.
+    var pointSizeMultiplier: Float = 1
 
     func makeUIView(context: Context) -> SCNView {
         let view = SCNView()
@@ -47,6 +55,21 @@ struct PointCloudSceneView: UIViewRepresentable {
         context.coordinator.points = points
         context.coordinator.measurement = measurement
         context.coordinator.syncMeasurementNodes()
+
+        // All of this mutates the existing scene in place. Rebuilding it
+        // would re-parse every point and reset the camera the user had
+        // orbited into position, on every toggle and every slider tick.
+        if let scene = uiView.scene, let statistics {
+            SceneBuilder.installReferenceGridIfNeeded(in: scene, statistics: statistics)
+        }
+        uiView.scene?.rootNode
+            .childNode(withName: PointCloudReferenceGrid.nodeName, recursively: false)?
+            .isHidden = !showsReferenceGrid
+
+        let element = uiView.scene?.rootNode
+            .childNode(withName: SceneBuilder.pointCloudNodeName, recursively: false)?
+            .geometry?.elements.first
+        element?.pointSize = SceneBuilder.pointSize(forMultiplier: pointSizeMultiplier)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -182,16 +205,38 @@ private enum SceneBuilder {
     /// the scan in a wash of red — thin them out for viewing.
     private static let minimumDisplayConfidence: Float = 0.2
 
+    /// Name on the point cloud's own node, so `updateUIView` can reach its
+    /// geometry to retune point size without rebuilding it — a rebuild of a
+    /// several-hundred-thousand-point geometry on every slider tick would
+    /// make the control unusable.
+    static let pointCloudNodeName = "structura.pointCloud"
+
     static func build(from points: [PointCloudExportPoint]) -> SCNScene {
         let scene = SCNScene()
         let visiblePoints = points.filter { $0.confidence >= minimumDisplayConfidence }
         guard !visiblePoints.isEmpty else { return scene }
 
         let node = SCNNode(geometry: pointCloudGeometry(for: visiblePoints))
+        node.name = pointCloudNodeName
         scene.rootNode.addChildNode(node)
 
         scene.rootNode.addChildNode(cameraNode(framing: node))
         return scene
+    }
+
+    /// Adds the reference layer the first time statistics are available, and
+    /// does nothing on every call after that.
+    ///
+    /// The grid can't be built in `build(from:)`: the statistics it needs are
+    /// measured in a background pass that finishes *after* the cloud is
+    /// already on screen, and delaying the first render until they land would
+    /// trade a visible improvement for a visible stall. Built once and then
+    /// only hidden/shown, so toggling it never re-runs this.
+    static func installReferenceGridIfNeeded(in scene: SCNScene, statistics: PointCloudStatistics.Report) {
+        guard scene.rootNode.childNode(withName: PointCloudReferenceGrid.nodeName, recursively: false) == nil else { return }
+        let grid = PointCloudReferenceGrid.makeNode(for: statistics.boundingBox)
+        grid.isHidden = true
+        scene.rootNode.addChildNode(grid)
     }
 
     // Tried and reverted (probado en dispositivo, 09/09/2026): lighting these
@@ -211,6 +256,21 @@ private enum SceneBuilder {
     //
     // Left as a note rather than deleted so the next attempt starts from what
     // was already measured, instead of re-deriving it.
+
+    /// World-space point size for a given user multiplier.
+    ///
+    /// **`SCNGeometryElement.pointSize` is in world units — metres here —
+    /// not pixels.** The screen-space clamps below it are what convert that
+    /// into pixels. Getting this backwards is what previously made every
+    /// point render at a fixed 8 px at every zoom level (it asked for
+    /// 6-metre points, which the clamp then swallowed), so the base size is
+    /// derived from the cloud's real spacing: fusion leaves one point per
+    /// `ProScanConfig.voxelSizeMeters` cell, and 1.3x that overlaps
+    /// neighbours slightly so surfaces read as surfaces rather than as
+    /// scattered dust.
+    static func pointSize(forMultiplier multiplier: Float) -> CGFloat {
+        CGFloat(ProScanConfig.voxelSizeMeters * 1.3 * multiplier)
+    }
 
     private static func pointCloudGeometry(for points: [PointCloudExportPoint]) -> SCNGeometry {
         var vertices: [SCNVector3] = []
@@ -257,7 +317,7 @@ private enum SceneBuilder {
         // one point per `ProScanConfig.voxelSizeMeters` (2 cm) cell, so 2.6 cm
         // points overlap their neighbours by ~30% and read as a surface when
         // you zoom in, while still shrinking honestly as you pull away.
-        element.pointSize = CGFloat(ProScanConfig.voxelSizeMeters) * 1.3
+        element.pointSize = pointSize(forMultiplier: 1)
         // Floor: a point must stay visible when the whole scan is framed
         // (where 2.6 cm projects to well under a pixel).
         element.minimumPointScreenSpaceRadius = 1.5

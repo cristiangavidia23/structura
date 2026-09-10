@@ -402,12 +402,24 @@ private struct HeatmapTabView: View {
     @State private var isPresentingCalibrationInput = false
     @State private var calibrationReferenceText = ""
 
+    // Inspector 3D
+    @State private var statistics: PointCloudStatistics.Report?
+    @State private var showsReferenceGrid = false
+    @State private var pointSizeMultiplier: Float = 1
+    @State private var isShowingStatistics = false
+
     var body: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .top) {
                 Group {
                     if let points, !points.isEmpty {
-                        PointCloudSceneView(points: points, measurement: measurement)
+                        PointCloudSceneView(
+                            points: points,
+                            measurement: measurement,
+                            statistics: statistics,
+                            showsReferenceGrid: showsReferenceGrid,
+                            pointSizeMultiplier: pointSizeMultiplier
+                        )
                     } else if isLoading {
                         ProgressView()
                     } else {
@@ -426,6 +438,11 @@ private struct HeatmapTabView: View {
                 if let points, !points.isEmpty {
                     measurementOverlay
                         .padding(.top, 12)
+
+                    inspectorControls
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                        .padding(.leading, 16)
+                        .padding(.bottom, 16)
                 }
             }
 
@@ -443,8 +460,14 @@ private struct HeatmapTabView: View {
             isLoading = false
 
             guard let loaded else { return }
+            // Both are whole-cloud passes, so they stay off the main actor
+            // and run after the cloud is already on screen rather than
+            // delaying it.
             coverage = await Task.detached(priority: .utility) {
                 ScanCoverageEstimator.estimateCoverage(of: loaded, voxelSize: ProScanConfig.coverageVoxelSizeMeters)
+            }.value
+            statistics = await Task.detached(priority: .utility) {
+                PointCloudStatistics.make(of: loaded)
             }.value
         }
         .alert("Calibrar con distancia conocida", isPresented: $isPresentingCalibrationInput) {
@@ -460,6 +483,125 @@ private struct HeatmapTabView: View {
         } message: {
             Text("Mide un objeto o distancia que ya conoces (por ejemplo, una puerta estándar o una cinta métrica) y escribe aquí su medida real en metros.")
         }
+    }
+
+    /// Floating 3D-inspector controls: reference grid, point size, and the
+    /// scan's own statistics. Deliberately compact and bottom-anchored — the
+    /// point cloud is the subject of this tab, so the controls stay out of
+    /// the way of it and of the measurement banner at the top.
+    @ViewBuilder
+    private var inspectorControls: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if isShowingStatistics, let statistics {
+                statisticsPanel(statistics)
+            }
+
+            HStack(spacing: 6) {
+                inspectorButton(
+                    systemImage: "grid",
+                    isActive: showsReferenceGrid,
+                    accessibilityLabel: "Grilla y caja delimitadora"
+                ) {
+                    showsReferenceGrid.toggle()
+                }
+
+                inspectorButton(
+                    systemImage: "chart.bar.doc.horizontal",
+                    isActive: isShowingStatistics,
+                    accessibilityLabel: "Estadísticas del escaneo"
+                ) {
+                    isShowingStatistics.toggle()
+                }
+                // Nothing to show, so nothing to toggle.
+                .disabled(statistics == nil)
+                .opacity(statistics == nil ? 0.4 : 1)
+
+                pointSizeControl
+            }
+        }
+    }
+
+    private func inspectorButton(
+        systemImage: String,
+        isActive: Bool,
+        accessibilityLabel: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(isActive ? Theme.accent : .white.opacity(0.85))
+                .frame(width: 34, height: 34)
+                .background(.black.opacity(0.55), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityAddTraits(isActive ? [.isButton, .isSelected] : .isButton)
+    }
+
+    /// Multiplies the physically-derived point size rather than setting an
+    /// absolute one, so the default (1x) stays tied to the cloud's real
+    /// sample spacing and the user is adjusting legibility, not inventing a
+    /// density the scan doesn't have.
+    private var pointSizeControl: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "circle.grid.3x3.fill")
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.7))
+            Slider(value: $pointSizeMultiplier, in: 0.5...3)
+                .frame(width: 104)
+                .tint(Theme.accent)
+                .accessibilityLabel("Tamaño de punto")
+                .accessibilityValue(String(format: "%.1f×", pointSizeMultiplier))
+        }
+        .padding(.horizontal, 11)
+        .frame(height: 34)
+        .background(.black.opacity(0.55), in: Capsule())
+    }
+
+    private func statisticsPanel(_ statistics: PointCloudStatistics.Report) -> some View {
+        let extent = statistics.boundingBox.extent
+        return VStack(alignment: .leading, spacing: 3) {
+            statisticsRow("Puntos", value: statistics.pointCount.formatted(.number))
+            statisticsRow(
+                "Densidad estricta",
+                value: String(format: "%.0f pts/m³", statistics.strictDensityPerCubicMeter)
+            )
+            statisticsRow(
+                "Densidad de caja",
+                value: String(format: "%.0f pts/m³", statistics.densityPerCubicMeter)
+            )
+            statisticsRow(
+                "Extensión",
+                value: String(format: "%.2f × %.2f × %.2f m", extent.x, extent.y, extent.z)
+            )
+            statisticsRow(
+                "Confianza media",
+                value: String(format: "%.0f%%", statistics.meanObservedConfidence * 100)
+            )
+            // The mean above describes only the observed share, so the share
+            // itself belongs next to it rather than buried in the export.
+            statisticsRow(
+                "Puntos con confianza real",
+                value: String(format: "%.0f%%", statistics.observedConfidenceFraction * 100)
+            )
+        }
+        .font(.caption2)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(.black.opacity(0.62), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func statisticsRow(_ label: String, value: String) -> some View {
+        HStack(spacing: 10) {
+            Text(label)
+                .foregroundStyle(.white.opacity(0.6))
+            Spacer(minLength: 8)
+            Text(value)
+                .monospacedDigit()
+                .foregroundStyle(.white)
+        }
+        .frame(maxWidth: 230, alignment: .leading)
     }
 
     @ViewBuilder

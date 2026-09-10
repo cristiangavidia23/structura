@@ -30,6 +30,7 @@
 		2C6893F22EDC4062F0D2FC20 /* ScanMetadataReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5E80BEB0CB670FA03A6DACB /* ScanMetadataReport.swift */; };
 		2FA60B50063ACCDE55B371BA /* HapticFeedbackAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C8E9BC4FEB9FBBC80773B /* HapticFeedbackAdapter.swift */; };
 		318A8191D2B2E91D011C9F1C /* ControlPointTransform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67056B78191EC24AE29A3C83 /* ControlPointTransform.swift */; };
+		31C72232032BF05849C35B89 /* PointCloudStatistics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A3928671A6BF1C4F82C5B40 /* PointCloudStatistics.swift */; };
 		3255F5D840E02258A05FF555 /* PointCloudSceneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71F6F0279CCC63A93FC857E6 /* PointCloudSceneView.swift */; };
 		33F516D6E2719891BB3680CF /* AngularVelocityGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 105738FDD02EE01FFCAFA0FA /* AngularVelocityGateTests.swift */; };
 		35B8136544889A2A68237486 /* PlaneSnapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA8E155518A8EE8202AB3A05 /* PlaneSnapping.swift */; };
@@ -50,6 +51,7 @@
 		53EF0C7BD4BAF1B0584B2856 /* PLYPointCloudReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E579F3F6F700D7CBA583130B /* PLYPointCloudReader.swift */; };
 		540E4E05FC31D406F8BDC7A6 /* FloorPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7ACE7847F9A758B78A183FD /* FloorPlanView.swift */; };
 		568BD69819C863FE264B56B9 /* BlueprintBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B01C9230240DE02C68C495B /* BlueprintBackdrop.swift */; };
+		575AF2698CFAE23B05266034 /* PointCloudStatistics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A3928671A6BF1C4F82C5B40 /* PointCloudStatistics.swift */; };
 		58E1A30A8D70DB236AB13DAC /* FloorPlanRegistrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57D3A6FD72ECD1414D454478 /* FloorPlanRegistrationTests.swift */; };
 		5AF58793170F18DF68ABE9A7 /* PlaneSnapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA8E155518A8EE8202AB3A05 /* PlaneSnapping.swift */; };
 		5B832F4D8AC146DCEF4A83A2 /* StructuraApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FE458FE3C3369BCAE73208A /* StructuraApp.swift */; };
@@ -58,6 +60,7 @@
 		617187767B9E4FF25BC9FB92 /* MeasurementCalibrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 974B4A9218725836CE01FD19 /* MeasurementCalibrationTests.swift */; };
 		63B3680B29F4C12AD8271A1D /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7951C17A6CBF4A1CC20EE401 /* CaptureView.swift */; };
 		6638C79556C6715CD274E4CD /* ConfidenceGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = A82CFA8EC1C0711AACED86F2 /* ConfidenceGrid.swift */; };
+		68B4163532601DF5486C297B /* PointCloudReferenceGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B520130EE846AF9B8C56E4F /* PointCloudReferenceGrid.swift */; };
 		6C6F754CAA7806C1A344748D /* WorldMapStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E705D531E4C91E830F6CA0C /* WorldMapStore.swift */; };
 		6FE324EDAAA0A95D5973973C /* SketchBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9AE11DBB56EE92B5291A229 /* SketchBackdrop.swift */; };
 		6FF1D4244081E8AC43D4974F /* PerformanceMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FF59F030F1091282DA20F00 /* PerformanceMonitor.swift */; };
@@ -103,6 +106,7 @@
 		C3719D927CBE03079F6DE37A /* MeasurementCalibration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B72DFFFFE3FDB6E4726DB26 /* MeasurementCalibration.swift */; };
 		C37E083C998838898C4C8A6C /* LASExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B92A5C7D93FBFB922459DE /* LASExporter.swift */; };
 		C63D263F638DF8C85B22E6EE /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1537BB48F60772F82768EE23 /* Theme.swift */; };
+		C9835A5A93AA04933A44864A /* PointCloudStatisticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA78FD710008663FBFAEBED4 /* PointCloudStatisticsTests.swift */; };
 		CE0A5DC80135604B1B43E1D3 /* HapticPatterns.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85C91490ECEF1771043D1F26 /* HapticPatterns.swift */; };
 		CFEF8CC68476CFA61F38B341 /* PrimaryButtonStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CFB7584D3FF0D3E7C1BD1EE /* PrimaryButtonStyle.swift */; };
 		D1C1694A953D73CC737DBECC /* RelocalizationConfirmation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FFAC2FD4B16FCF9AAC16D39 /* RelocalizationConfirmation.swift */; };
@@ -142,6 +146,7 @@
 		11138480935319AAE2C1B695 /* GraphPaperBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphPaperBackground.swift; sourceTree = "<group>"; };
 		1537BB48F60772F82768EE23 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		1A0C9FE8433D28AE5CC93B98 /* ScanCoverageEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanCoverageEstimator.swift; sourceTree = "<group>"; };
+		1B520130EE846AF9B8C56E4F /* PointCloudReferenceGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointCloudReferenceGrid.swift; sourceTree = "<group>"; };
 		21CC56301B0D1D6A257592C3 /* TopographicAxisConventionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopographicAxisConventionTests.swift; sourceTree = "<group>"; };
 		271F2E919186953521F31505 /* ProScanConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProScanConfig.swift; sourceTree = "<group>"; };
 		2D90AF1927E076EB7FF58516 /* LASExporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LASExporterTests.swift; sourceTree = "<group>"; };
@@ -166,6 +171,7 @@
 		6376B851D6604705566F5F6B /* PointCloudLocationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointCloudLocationProvider.swift; sourceTree = "<group>"; };
 		67056B78191EC24AE29A3C83 /* ControlPointTransform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlPointTransform.swift; sourceTree = "<group>"; };
 		67C5CD0BC15A87A0AB74E5BD /* PDFExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFExporter.swift; sourceTree = "<group>"; };
+		6A3928671A6BF1C4F82C5B40 /* PointCloudStatistics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointCloudStatistics.swift; sourceTree = "<group>"; };
 		6B9B861B85EFC434FDBFAFAC /* DollhouseSceneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DollhouseSceneView.swift; sourceTree = "<group>"; };
 		6CFB7584D3FF0D3E7C1BD1EE /* PrimaryButtonStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButtonStyle.swift; sourceTree = "<group>"; };
 		6E9127CC3948D5F70C6D15C8 /* ProScanCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProScanCaptureView.swift; sourceTree = "<group>"; };
@@ -223,6 +229,7 @@
 		F74DD6FC42414C4695BD1344 /* ARPointCloudSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARPointCloudSession.swift; sourceTree = "<group>"; };
 		FA100951FD632BFEE1AF830D /* MeasurementSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeasurementSession.swift; sourceTree = "<group>"; };
 		FA76854C563F8F4C3BC05788 /* ResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultView.swift; sourceTree = "<group>"; };
+		FA78FD710008663FBFAEBED4 /* PointCloudStatisticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointCloudStatisticsTests.swift; sourceTree = "<group>"; };
 		FF8E4841A5F15A6CB6B38DDE /* PointCloudStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointCloudStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -407,6 +414,7 @@
 				C6C98F5A34C84871640FB1C4 /* PointCloudFloorPlanBuilderTests.swift */,
 				344810CD56088BCE1FB40BAC /* PointCloudMeshClassificationTests.swift */,
 				C169CC49A0329771A7CD9DB5 /* PointCloudRaycastTests.swift */,
+				FA78FD710008663FBFAEBED4 /* PointCloudStatisticsTests.swift */,
 				025F8D38F1A2CB10DF819B29 /* ProScanConfigTests.swift */,
 				8BF9757AE477484E49109ADC /* RelocalizationConfirmationTests.swift */,
 				B3A12DC99636CDF75B52D77B /* ScanCoverageEstimatorTests.swift */,
@@ -461,7 +469,9 @@
 				7F54FCACA0D99205892F2AB0 /* PointCloudFloorPlanBuilder.swift */,
 				DB9457CA7C1623BC76196FFF /* PointCloudFloorPlanDebugView.swift */,
 				CF3817431DAD742081E0F2AC /* PointCloudRaycast.swift */,
+				1B520130EE846AF9B8C56E4F /* PointCloudReferenceGrid.swift */,
 				71F6F0279CCC63A93FC857E6 /* PointCloudSceneView.swift */,
+				6A3928671A6BF1C4F82C5B40 /* PointCloudStatistics.swift */,
 				FA76854C563F8F4C3BC05788 /* ResultView.swift */,
 				1A0C9FE8433D28AE5CC93B98 /* ScanCoverageEstimator.swift */,
 			);
@@ -597,6 +607,8 @@
 				BD71DFEA1311CD837094325F /* PointCloudMeshClassificationTests.swift in Sources */,
 				0A0F539B19173DFD236DE9F6 /* PointCloudRaycast.swift in Sources */,
 				148CA1CE2CBE42BDFECCCEE8 /* PointCloudRaycastTests.swift in Sources */,
+				31C72232032BF05849C35B89 /* PointCloudStatistics.swift in Sources */,
+				C9835A5A93AA04933A44864A /* PointCloudStatisticsTests.swift in Sources */,
 				5BC68535CDF6301F9C13A683 /* ProScanConfig.swift in Sources */,
 				4C5789CF5497919DA34BC996 /* ProScanConfigTests.swift in Sources */,
 				D1C1694A953D73CC737DBECC /* RelocalizationConfirmation.swift in Sources */,
@@ -665,7 +677,9 @@
 				C36DAC0A00689BDC7E1BD21E /* PointCloudLocationProvider.swift in Sources */,
 				39B83B4E689E561E1760224E /* PointCloudMeshClassification.swift in Sources */,
 				A0A3BA4F46FB5049132003E6 /* PointCloudRaycast.swift in Sources */,
+				68B4163532601DF5486C297B /* PointCloudReferenceGrid.swift in Sources */,
 				3255F5D840E02258A05FF555 /* PointCloudSceneView.swift in Sources */,
+				575AF2698CFAE23B05266034 /* PointCloudStatistics.swift in Sources */,
 				FDFD28C2A9FBB9D5BC2E4192 /* PointCloudStore.swift in Sources */,
 				CFEF8CC68476CFA61F38B341 /* PrimaryButtonStyle.swift in Sources */,
 				4FC1F9739982F07BDE4FFD8A /* ProScanCaptureView.swift in Sources */,

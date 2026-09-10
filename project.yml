@@ -80,6 +80,7 @@ targets:
       - path: Structura/Result/ScanCoverageEstimator.swift
       - path: Structura/Result/PointCloudFloorPlanBuilder.swift
       - path: Structura/Result/FloorPlanRegistration.swift
+      - path: Structura/Result/PointCloudStatistics.swift
       - path: StructuraTests
     settings:
       base:
