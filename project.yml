@@ -81,6 +81,8 @@ targets:
       - path: Structura/Result/PointCloudFloorPlanBuilder.swift
       - path: Structura/Result/FloorPlanRegistration.swift
       - path: Structura/Result/PointCloudStatistics.swift
+      - path: Structura/Support/ScanRequirements.swift
+      - path: Structura/Support/ScanRequirementsModel.swift
       - path: StructuraTests
     settings:
       base:

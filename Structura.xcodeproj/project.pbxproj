@@ -17,13 +17,18 @@
 		116B205D6EB864B0F5A2801F /* ScanDriftBudget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC9C883EE708825A3774130C /* ScanDriftBudget.swift */; };
 		1284DB1F16E071E82A12695F /* ARCameraPassthroughView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 330F5779F983960E20FDC350 /* ARCameraPassthroughView.swift */; };
 		148CA1CE2CBE42BDFECCCEE8 /* PointCloudRaycastTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C169CC49A0329771A7CD9DB5 /* PointCloudRaycastTests.swift */; };
+		17CD09B7037351681495A209 /* RequirementsBlockedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8202E7C38C6DDEE8741B3CE /* RequirementsBlockedView.swift */; };
 		180945F275C37DEE6D5E454F /* TopographicAxisConvention.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39CCA3B1E575B48104612FDB /* TopographicAxisConvention.swift */; };
+		1B3AA021ACE8F57B60250A0C /* SystemScanRequirementsProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C1070839221B867AABC600B /* SystemScanRequirementsProbe.swift */; };
 		1BC6DD4B091DD660414A23C6 /* ControlPointTransformTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 037614FED6FB7CDAAEE397A2 /* ControlPointTransformTests.swift */; };
 		1E6C2571FC8EF3AD73DC7704 /* MeasurementSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA100951FD632BFEE1AF830D /* MeasurementSession.swift */; };
+		1EE88D8101046A11A38A448D /* ScanRequirementsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 755EC4558134061D01D7B949 /* ScanRequirementsModel.swift */; };
 		1F0DD5C8AFD027A0DBDD4756 /* HapticEngineManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AADD895A7BB9CAF51FA98FA /* HapticEngineManager.swift */; };
 		2285404AC3429D18D4FCF7D1 /* FloorPlanRegistration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B11A1DDE5FC11D043220B03C /* FloorPlanRegistration.swift */; };
 		242D1B00C0CB926622D52B4F /* ProScanConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 271F2E919186953521F31505 /* ProScanConfig.swift */; };
+		24B5772C5D8343950309FADC /* ScanRequirements.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64337C3C520F109448E66DBD /* ScanRequirements.swift */; };
 		25222D3D9AE1FED8041A17B1 /* PointCloudFloorPlanBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C98F5A34C84871640FB1C4 /* PointCloudFloorPlanBuilderTests.swift */; };
+		27AE781911ED5631D4068875 /* ScanRequirements.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64337C3C520F109448E66DBD /* ScanRequirements.swift */; };
 		2830507F17C08E68985794C2 /* DelegateFrameMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8700A58F5CFC13210FA72D2A /* DelegateFrameMetrics.swift */; };
 		29C148636B7C4650FCD69ECC /* PLYExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58CEB5451F53B00528AC8C95 /* PLYExporter.swift */; };
 		2AFED78E25F4F94C8E3103B5 /* PointCloudExportModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A8E1B86B65464382AB41A6 /* PointCloudExportModels.swift */; };
@@ -92,6 +97,7 @@
 		B19673AE1527FA2D9CE2C50F /* AngularVelocityGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7A2A901EC583E7E87B2FC19 /* AngularVelocityGate.swift */; };
 		B31CC3678E12BB34EB2ACE1A /* PointCloudFloorPlanDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB9457CA7C1623BC76196FFF /* PointCloudFloorPlanDebugView.swift */; };
 		B41A16425DD8E4F0FEA7FA9F /* ScanCoverageEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0C9FE8433D28AE5CC93B98 /* ScanCoverageEstimator.swift */; };
+		B5CFAF6C96BCDE5009D90992 /* ScanRequirementsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 755EC4558134061D01D7B949 /* ScanRequirementsModel.swift */; };
 		B682CF5C7E2A6D4FB6107A37 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEA66209CF36225BA83E1D2F /* OnboardingView.swift */; };
 		B68EC01AD3A9B2F10367426A /* RelocalizationConfirmation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FFAC2FD4B16FCF9AAC16D39 /* RelocalizationConfirmation.swift */; };
 		B7138A37BE4DB4F202E22065 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3E15B20D478AC5FAE663090 /* PaywallView.swift */; };
@@ -122,6 +128,7 @@
 		E54A39E628C41B4646B1EDC1 /* ScanCoverageEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0C9FE8433D28AE5CC93B98 /* ScanCoverageEstimator.swift */; };
 		E8646A4C4193364906670CDD /* RoomCaptureRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = E78D94B24D2AB18DA74DD4D3 /* RoomCaptureRepresentable.swift */; };
 		EC6B4FD1E91A04911C370B23 /* ScanRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F1DB39A49C2AFE040165840 /* ScanRecord.swift */; };
+		F31FD7063E5C745957302236 /* ScanRequirementsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C08E22491506420C49C9DF9 /* ScanRequirementsTests.swift */; };
 		F40F67FAC6756A4521982309 /* UnitSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 731115085003FD13639169C5 /* UnitSystem.swift */; };
 		FA7C5B718BBCF3BCA6929CBF /* FloorPlanRegistration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B11A1DDE5FC11D043220B03C /* FloorPlanRegistration.swift */; };
 		FB7495B1C3F63F263082EA57 /* ARSessionStartupPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0705ED6E4A2189A6D95E362 /* ARSessionStartupPolicyTests.swift */; };
@@ -149,6 +156,7 @@
 		1B520130EE846AF9B8C56E4F /* PointCloudReferenceGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointCloudReferenceGrid.swift; sourceTree = "<group>"; };
 		21CC56301B0D1D6A257592C3 /* TopographicAxisConventionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopographicAxisConventionTests.swift; sourceTree = "<group>"; };
 		271F2E919186953521F31505 /* ProScanConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProScanConfig.swift; sourceTree = "<group>"; };
+		2C08E22491506420C49C9DF9 /* ScanRequirementsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanRequirementsTests.swift; sourceTree = "<group>"; };
 		2D90AF1927E076EB7FF58516 /* LASExporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LASExporterTests.swift; sourceTree = "<group>"; };
 		2E705D531E4C91E830F6CA0C /* WorldMapStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldMapStore.swift; sourceTree = "<group>"; };
 		2ED71AB772D38FF5E9A434E4 /* ScanStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanStore.swift; sourceTree = "<group>"; };
@@ -169,6 +177,7 @@
 		5FE7635358A11CE8711970B5 /* VoxelAccumulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoxelAccumulator.swift; sourceTree = "<group>"; };
 		5FF59F030F1091282DA20F00 /* PerformanceMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceMonitor.swift; sourceTree = "<group>"; };
 		6376B851D6604705566F5F6B /* PointCloudLocationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointCloudLocationProvider.swift; sourceTree = "<group>"; };
+		64337C3C520F109448E66DBD /* ScanRequirements.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanRequirements.swift; sourceTree = "<group>"; };
 		67056B78191EC24AE29A3C83 /* ControlPointTransform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlPointTransform.swift; sourceTree = "<group>"; };
 		67C5CD0BC15A87A0AB74E5BD /* PDFExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFExporter.swift; sourceTree = "<group>"; };
 		6A3928671A6BF1C4F82C5B40 /* PointCloudStatistics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointCloudStatistics.swift; sourceTree = "<group>"; };
@@ -178,6 +187,7 @@
 		6FFAC2FD4B16FCF9AAC16D39 /* RelocalizationConfirmation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelocalizationConfirmation.swift; sourceTree = "<group>"; };
 		71F6F0279CCC63A93FC857E6 /* PointCloudSceneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointCloudSceneView.swift; sourceTree = "<group>"; };
 		731115085003FD13639169C5 /* UnitSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnitSystem.swift; sourceTree = "<group>"; };
+		755EC4558134061D01D7B949 /* ScanRequirementsModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanRequirementsModel.swift; sourceTree = "<group>"; };
 		7951C17A6CBF4A1CC20EE401 /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
 		7AADD895A7BB9CAF51FA98FA /* HapticEngineManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticEngineManager.swift; sourceTree = "<group>"; };
 		7F54FCACA0D99205892F2AB0 /* PointCloudFloorPlanBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointCloudFloorPlanBuilder.swift; sourceTree = "<group>"; };
@@ -187,11 +197,13 @@
 		8700A58F5CFC13210FA72D2A /* DelegateFrameMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DelegateFrameMetrics.swift; sourceTree = "<group>"; };
 		8B01C9230240DE02C68C495B /* BlueprintBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlueprintBackdrop.swift; sourceTree = "<group>"; };
 		8BF9757AE477484E49109ADC /* RelocalizationConfirmationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelocalizationConfirmationTests.swift; sourceTree = "<group>"; };
+		8C1070839221B867AABC600B /* SystemScanRequirementsProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemScanRequirementsProbe.swift; sourceTree = "<group>"; };
 		8DF852FB48CD3854642A5602 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		8F1DB39A49C2AFE040165840 /* ScanRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanRecord.swift; sourceTree = "<group>"; };
 		974B4A9218725836CE01FD19 /* MeasurementCalibrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeasurementCalibrationTests.swift; sourceTree = "<group>"; };
 		9F2D1BB617A4B198C03673AC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A54ECCBFE7B5F5AEE59C49EF /* CornerBrackets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CornerBrackets.swift; sourceTree = "<group>"; };
+		A8202E7C38C6DDEE8741B3CE /* RequirementsBlockedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequirementsBlockedView.swift; sourceTree = "<group>"; };
 		A82CFA8EC1C0711AACED86F2 /* ConfidenceGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfidenceGrid.swift; sourceTree = "<group>"; };
 		AB5CFCB33DF6220B9E48589B /* CameraUnprojectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraUnprojectionTests.swift; sourceTree = "<group>"; };
 		AC9C883EE708825A3774130C /* ScanDriftBudget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanDriftBudget.swift; sourceTree = "<group>"; };
@@ -391,6 +403,10 @@
 				863FE9E182C6FF0E7485919B /* Haptics.swift */,
 				B7729D532E4D0E3C98E539BC /* LegalLinks.swift */,
 				6CFB7584D3FF0D3E7C1BD1EE /* PrimaryButtonStyle.swift */,
+				A8202E7C38C6DDEE8741B3CE /* RequirementsBlockedView.swift */,
+				64337C3C520F109448E66DBD /* ScanRequirements.swift */,
+				755EC4558134061D01D7B949 /* ScanRequirementsModel.swift */,
+				8C1070839221B867AABC600B /* SystemScanRequirementsProbe.swift */,
 				1537BB48F60772F82768EE23 /* Theme.swift */,
 				731115085003FD13639169C5 /* UnitSystem.swift */,
 			);
@@ -420,6 +436,7 @@
 				B3A12DC99636CDF75B52D77B /* ScanCoverageEstimatorTests.swift */,
 				0222C9F8EAFEFB97073D0EBE /* ScanDriftBudgetTests.swift */,
 				0AFC59EBA2900F7C1712E748 /* ScanMetadataReportTests.swift */,
+				2C08E22491506420C49C9DF9 /* ScanRequirementsTests.swift */,
 				21CC56301B0D1D6A257592C3 /* TopographicAxisConventionTests.swift */,
 				39D1DE8273E831A410C07DEA /* VoxelAccumulatorTests.swift */,
 			);
@@ -619,6 +636,9 @@
 				AB553A574E302792B3359F42 /* ScanDriftBudgetTests.swift in Sources */,
 				2C6893F22EDC4062F0D2FC20 /* ScanMetadataReport.swift in Sources */,
 				3B62D35E868869AA51AACD41 /* ScanMetadataReportTests.swift in Sources */,
+				24B5772C5D8343950309FADC /* ScanRequirements.swift in Sources */,
+				1EE88D8101046A11A38A448D /* ScanRequirementsModel.swift in Sources */,
+				F31FD7063E5C745957302236 /* ScanRequirementsTests.swift in Sources */,
 				9B408A13C592BD3A6B0F4560 /* TopographicAxisConvention.swift in Sources */,
 				9D6BD1E26F1578631F8D411A /* TopographicAxisConventionTests.swift in Sources */,
 				BC12EE9763B89B5CB82023A4 /* VoxelAccumulator.swift in Sources */,
@@ -688,16 +708,20 @@
 				107B7208591424E8291D3979 /* PurchaseManager.swift in Sources */,
 				B90EBBA2610B125070ED5B40 /* RadialToolMenu.swift in Sources */,
 				B68EC01AD3A9B2F10367426A /* RelocalizationConfirmation.swift in Sources */,
+				17CD09B7037351681495A209 /* RequirementsBlockedView.swift in Sources */,
 				E4F256CC6E3FCA46E0BCAF9C /* ResultView.swift in Sources */,
 				E8646A4C4193364906670CDD /* RoomCaptureRepresentable.swift in Sources */,
 				B41A16425DD8E4F0FEA7FA9F /* ScanCoverageEstimator.swift in Sources */,
 				116B205D6EB864B0F5A2801F /* ScanDriftBudget.swift in Sources */,
 				E19E8EA5B1C5E1DD218EA6E4 /* ScanMetadataReport.swift in Sources */,
 				EC6B4FD1E91A04911C370B23 /* ScanRecord.swift in Sources */,
+				27AE781911ED5631D4068875 /* ScanRequirements.swift in Sources */,
+				B5CFAF6C96BCDE5009D90992 /* ScanRequirementsModel.swift in Sources */,
 				AB10C18997BD74B42E6505FB /* ScanStore.swift in Sources */,
 				ADE8A7A6FCAAC237C267A16C /* SettingsView.swift in Sources */,
 				6FE324EDAAA0A95D5973973C /* SketchBackdrop.swift in Sources */,
 				5B832F4D8AC146DCEF4A83A2 /* StructuraApp.swift in Sources */,
+				1B3AA021ACE8F57B60250A0C /* SystemScanRequirementsProbe.swift in Sources */,
 				C63D263F638DF8C85B22E6EE /* Theme.swift in Sources */,
 				180945F275C37DEE6D5E454F /* TopographicAxisConvention.swift in Sources */,
 				F40F67FAC6756A4521982309 /* UnitSystem.swift in Sources */,
