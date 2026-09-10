@@ -1,5 +1,14 @@
 default_platform(:ios)
 
+# Fastlane exige que el shell tenga el locale en UTF-8 antes de correr
+# `scan`/`gym` (lo verificado corriendo el lane `tests` de verdad en esta
+# Mac, no una suposición) — si falta, corta con un mensaje explicando
+# exactamente qué exportar. Si aparece ese error, agregar a ~/.zshrc (o
+# ~/.bashrc):
+#   export LANG=en_US.UTF-8
+#   export LC_ALL=en_US.UTF-8
+# y abrir una terminal nueva.
+
 # Nombre del scheme y de la carpeta de salida — un solo lugar para
 # cambiarlos si alguna vez se renombra el proyecto.
 SCHEME = "Structura"
@@ -133,7 +142,12 @@ platform :ios do
   # `Structura` (la app en sí) no pueda instalarse ahí.
 
   private_lane :ensure_paywall_bypass_is_off do
-    contents = File.read(File.join("..", PAYWALL_BYPASS_FILE))
+    # Encoding explícito: sin esto, `File.read` usa el locale del shell que
+    # esté corriendo el lane — en una Mac con el locale en C/US-ASCII (no
+    # UTF-8), lee mal cualquier archivo con tildes o rayas en los
+    # comentarios (como este mismo) y revienta con "invalid byte sequence
+    # in US-ASCII" antes de llegar siquiera a la verificación real.
+    contents = File.read(File.join("..", PAYWALL_BYPASS_FILE), encoding: "UTF-8")
     unless contents =~ /static let isPaywallDisabledForTesting = (true|false)/
       UI.user_error!(
         "No se pudo verificar el interruptor de paywall en #{PAYWALL_BYPASS_FILE} " \
