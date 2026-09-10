@@ -166,7 +166,8 @@ final class PLYRoundTripTests: XCTestCase {
         let readBack = try XCTUnwrap(PLYPointCloudReader.read(from: url))
         XCTAssertEqual(readBack.count, count)
         XCTAssertEqual(readBack.first?.position.x, 0)
-        XCTAssertEqual(readBack.last?.position.x, Float(count - 1) * 0.001, accuracy: 0.0001)
+        let lastX = try XCTUnwrap(readBack.last?.position.x)
+        XCTAssertEqual(lastX, Float(count - 1) * 0.001, accuracy: 0.0001)
     }
 
     /// `write` must not leave its `.tmp` staging file behind, whether it

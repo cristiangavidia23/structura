@@ -67,7 +67,7 @@ final class ConfidenceGridTests: XCTestCase {
     /// with it implemented wrong), an unsynchronized read-modify-write on
     /// `cells[key]` would be expected to lose some observations under this
     /// much contention, not just occasionally skew the average slightly.
-    func testConcurrentRecordsFromMultipleQueuesDoNotLoseObservations() {
+    func testConcurrentRecordsFromMultipleQueuesDoNotLoseObservations() throws {
         let grid = ConfidenceGrid()
         let position = SIMD3<Float>(3, 3, 3)
         let iterationsPerQueue = 500
@@ -91,7 +91,7 @@ final class ConfidenceGridTests: XCTestCase {
         // Every observation landed — none lost to an unsynchronized
         // read-modify-write — so the average must be exactly the midpoint
         // regardless of how the two queues interleaved.
-        let confidence = grid.confidence(at: position)
+        let confidence = try XCTUnwrap(grid.confidence(at: position))
         XCTAssertEqual(confidence, 0.5, accuracy: 0.0001)
     }
 

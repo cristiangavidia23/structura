@@ -1,3 +1,4 @@
+import Foundation
 import simd
 
 /// Per-voxel confidence and coverage signal, fed by the throttled raw-depth

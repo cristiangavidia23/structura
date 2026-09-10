@@ -48,7 +48,7 @@ struct DelegateFrameMetrics {
     ///     frame actually executes.
     mutating func record(frameTimestamp: TimeInterval, now: TimeInterval) {
         if windowStartTimestamp == nil {
-            windowStartTimestamp = now
+            windowStartTimestamp = frameTimestamp
         }
         // Clamped at zero: clock-base drift between `ARFrame.timestamp` and
         // `CACurrentMediaTime()` is expected to be negligible in practice,

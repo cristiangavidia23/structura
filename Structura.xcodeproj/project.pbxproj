@@ -14,6 +14,7 @@
 		0A0F539B19173DFD236DE9F6 /* PointCloudRaycast.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF3817431DAD742081E0F2AC /* PointCloudRaycast.swift */; };
 		107B7208591424E8291D3979 /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBAF40F0AD07E417D2B06870 /* PurchaseManager.swift */; };
 		10DF4B8B1D8AF3C71F78E963 /* LASExporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D90AF1927E076EB7FF58516 /* LASExporterTests.swift */; };
+		116B205D6EB864B0F5A2801F /* ScanDriftBudget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC9C883EE708825A3774130C /* ScanDriftBudget.swift */; };
 		1284DB1F16E071E82A12695F /* ARCameraPassthroughView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 330F5779F983960E20FDC350 /* ARCameraPassthroughView.swift */; };
 		148CA1CE2CBE42BDFECCCEE8 /* PointCloudRaycastTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C169CC49A0329771A7CD9DB5 /* PointCloudRaycastTests.swift */; };
 		180945F275C37DEE6D5E454F /* TopographicAxisConvention.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39CCA3B1E575B48104612FDB /* TopographicAxisConvention.swift */; };
@@ -21,13 +22,18 @@
 		1E6C2571FC8EF3AD73DC7704 /* MeasurementSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA100951FD632BFEE1AF830D /* MeasurementSession.swift */; };
 		1F0DD5C8AFD027A0DBDD4756 /* HapticEngineManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AADD895A7BB9CAF51FA98FA /* HapticEngineManager.swift */; };
 		242D1B00C0CB926622D52B4F /* ProScanConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 271F2E919186953521F31505 /* ProScanConfig.swift */; };
+		25222D3D9AE1FED8041A17B1 /* PointCloudFloorPlanBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C98F5A34C84871640FB1C4 /* PointCloudFloorPlanBuilderTests.swift */; };
+		2830507F17C08E68985794C2 /* DelegateFrameMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8700A58F5CFC13210FA72D2A /* DelegateFrameMetrics.swift */; };
 		29C148636B7C4650FCD69ECC /* PLYExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58CEB5451F53B00528AC8C95 /* PLYExporter.swift */; };
 		2AFED78E25F4F94C8E3103B5 /* PointCloudExportModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A8E1B86B65464382AB41A6 /* PointCloudExportModels.swift */; };
+		2C6893F22EDC4062F0D2FC20 /* ScanMetadataReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5E80BEB0CB670FA03A6DACB /* ScanMetadataReport.swift */; };
 		2FA60B50063ACCDE55B371BA /* HapticFeedbackAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C8E9BC4FEB9FBBC80773B /* HapticFeedbackAdapter.swift */; };
 		318A8191D2B2E91D011C9F1C /* ControlPointTransform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67056B78191EC24AE29A3C83 /* ControlPointTransform.swift */; };
 		3255F5D840E02258A05FF555 /* PointCloudSceneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71F6F0279CCC63A93FC857E6 /* PointCloudSceneView.swift */; };
+		33F516D6E2719891BB3680CF /* AngularVelocityGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 105738FDD02EE01FFCAFA0FA /* AngularVelocityGateTests.swift */; };
 		35B8136544889A2A68237486 /* PlaneSnapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA8E155518A8EE8202AB3A05 /* PlaneSnapping.swift */; };
 		39B83B4E689E561E1760224E /* PointCloudMeshClassification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33A075C9AFC99643960014D1 /* PointCloudMeshClassification.swift */; };
+		3B62D35E868869AA51AACD41 /* ScanMetadataReportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AFC59EBA2900F7C1712E748 /* ScanMetadataReportTests.swift */; };
 		3B64A9FBA94EC287070C23CF /* CornerBrackets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A54ECCBFE7B5F5AEE59C49EF /* CornerBrackets.swift */; };
 		3F1398B8AEF92E7B2EE13FA5 /* PDFExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67C5CD0BC15A87A0AB74E5BD /* PDFExporter.swift */; };
 		402952AE79DAD9BCF67FB934 /* CameraUnprojection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB68E66E52AEDC421E717786 /* CameraUnprojection.swift */; };
@@ -38,6 +44,7 @@
 		4C5789CF5497919DA34BC996 /* ProScanConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 025F8D38F1A2CB10DF819B29 /* ProScanConfigTests.swift */; };
 		4D6F9E0DF437D1BCB2E91811 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = C2A3EEBCDBE2E8B8FE50ECCC /* RevenueCat */; };
 		4FC1F9739982F07BDE4FFD8A /* ProScanCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E9127CC3948D5F70C6D15C8 /* ProScanCaptureView.swift */; };
+		4FD48B41CD7D819EC0048D34 /* PointCloudFloorPlanBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F54FCACA0D99205892F2AB0 /* PointCloudFloorPlanBuilder.swift */; };
 		510A606A473B5A743EB1A360 /* ConfidenceGridTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3154D5AD72B0748B64663A4 /* ConfidenceGridTests.swift */; };
 		53EF0C7BD4BAF1B0584B2856 /* PLYPointCloudReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E579F3F6F700D7CBA583130B /* PLYPointCloudReader.swift */; };
 		540E4E05FC31D406F8BDC7A6 /* FloorPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7ACE7847F9A758B78A183FD /* FloorPlanView.swift */; };
@@ -54,6 +61,8 @@
 		70F877652F69F1D76821B76D /* HUDStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B9FF8D927E4458DE33319B /* HUDStyle.swift */; };
 		757939FE753E42A234E1A50E /* PointCloudMeshClassification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33A075C9AFC99643960014D1 /* PointCloudMeshClassification.swift */; };
 		7A50C934AD6E7641BE5062BD /* ProScanCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6549FB28FD33315C15B8291 /* ProScanCoordinator.swift */; };
+		807FD3E548D4E6ABCC90A1CF /* ARSessionStartupPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF486840EB9B88C63E71B382 /* ARSessionStartupPolicy.swift */; };
+		8427EE3BCC1D65A7F2D98475 /* ScanDriftBudget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC9C883EE708825A3774130C /* ScanDriftBudget.swift */; };
 		8667BA582A05A85C7E4D9FE9 /* ControlPointTransform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67056B78191EC24AE29A3C83 /* ControlPointTransform.swift */; };
 		897CEC7D157E878822445F58 /* CameraUnprojection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB68E66E52AEDC421E717786 /* CameraUnprojection.swift */; };
 		8B965377CF854C7E639BCB8A /* CameraUnprojectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB5CFCB33DF6220B9E48589B /* CameraUnprojectionTests.swift */; };
@@ -62,6 +71,7 @@
 		8C8AB3517A1182CFA187900F /* MeasurementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06959A398729A01CD14F0E23 /* MeasurementsView.swift */; };
 		8FAD02825685F748418F02F1 /* MetricsHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3002793F3D7724D255034E3E /* MetricsHUD.swift */; };
 		940A531076C50AF139E80AA7 /* PointCloudFrame.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2E547505D26B5B157184FD5 /* PointCloudFrame.swift */; };
+		95AD81FBF96001C01C86D5F4 /* DelegateFrameMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8700A58F5CFC13210FA72D2A /* DelegateFrameMetrics.swift */; };
 		9A583751901FDC76CDD5CA2C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8DF852FB48CD3854642A5602 /* Assets.xcassets */; };
 		9B408A13C592BD3A6B0F4560 /* TopographicAxisConvention.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39CCA3B1E575B48104612FDB /* TopographicAxisConvention.swift */; };
 		9D6BD1E26F1578631F8D411A /* TopographicAxisConventionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21CC56301B0D1D6A257592C3 /* TopographicAxisConventionTests.swift */; };
@@ -70,8 +80,10 @@
 		A19EC6145156450643BFF5A4 /* LocalEngineeringCRS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E6420719C6CCDCD9E4AAB00 /* LocalEngineeringCRS.swift */; };
 		A40B251D2E4E0F9C7FAE4C76 /* PLYRoundTripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCCE829B7DF4629C92B6C1EE /* PLYRoundTripTests.swift */; };
 		AB10C18997BD74B42E6505FB /* ScanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ED71AB772D38FF5E9A434E4 /* ScanStore.swift */; };
+		AB553A574E302792B3359F42 /* ScanDriftBudgetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0222C9F8EAFEFB97073D0EBE /* ScanDriftBudgetTests.swift */; };
 		AC50D05314996DB730303611 /* FrameGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04CD39900746A2CE3A2BBA0C /* FrameGate.swift */; };
 		ADE8A7A6FCAAC237C267A16C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F2D1BB617A4B198C03673AC /* SettingsView.swift */; };
+		B19673AE1527FA2D9CE2C50F /* AngularVelocityGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7A2A901EC583E7E87B2FC19 /* AngularVelocityGate.swift */; };
 		B41A16425DD8E4F0FEA7FA9F /* ScanCoverageEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0C9FE8433D28AE5CC93B98 /* ScanCoverageEstimator.swift */; };
 		B682CF5C7E2A6D4FB6107A37 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEA66209CF36225BA83E1D2F /* OnboardingView.swift */; };
 		B68EC01AD3A9B2F10367426A /* RelocalizationConfirmation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FFAC2FD4B16FCF9AAC16D39 /* RelocalizationConfirmation.swift */; };
@@ -90,30 +102,38 @@
 		CE0A5DC80135604B1B43E1D3 /* HapticPatterns.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85C91490ECEF1771043D1F26 /* HapticPatterns.swift */; };
 		CFEF8CC68476CFA61F38B341 /* PrimaryButtonStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CFB7584D3FF0D3E7C1BD1EE /* PrimaryButtonStyle.swift */; };
 		D1C1694A953D73CC737DBECC /* RelocalizationConfirmation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FFAC2FD4B16FCF9AAC16D39 /* RelocalizationConfirmation.swift */; };
+		D43526D96C09C0C59D9036C2 /* AngularVelocityGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7A2A901EC583E7E87B2FC19 /* AngularVelocityGate.swift */; };
 		D61F47CA037B009418BB0A07 /* PlaneSnappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F054DFD72611CCD8A73FD833 /* PlaneSnappingTests.swift */; };
 		D7B8E1605F46847294029568 /* ARPointCloudSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = F74DD6FC42414C4695BD1344 /* ARPointCloudSession.swift */; };
 		D7D5FA1CDA08E28E9205B640 /* LocalEngineeringCRS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E6420719C6CCDCD9E4AAB00 /* LocalEngineeringCRS.swift */; };
 		D90A81742AF1F6505906166F /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 863FE9E182C6FF0E7485919B /* Haptics.swift */; };
 		E113694ED1E0145766B0F97D /* ScanCoverageEstimatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3A12DC99636CDF75B52D77B /* ScanCoverageEstimatorTests.swift */; };
 		E19E8EA5B1C5E1DD218EA6E4 /* ScanMetadataReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5E80BEB0CB670FA03A6DACB /* ScanMetadataReport.swift */; };
+		E19F93C3F6BB43BFC94359D1 /* DelegateFrameMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 591BEB81B6DEF966A5F214F2 /* DelegateFrameMetricsTests.swift */; };
 		E4F256CC6E3FCA46E0BCAF9C /* ResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA76854C563F8F4C3BC05788 /* ResultView.swift */; };
 		E54A39E628C41B4646B1EDC1 /* ScanCoverageEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0C9FE8433D28AE5CC93B98 /* ScanCoverageEstimator.swift */; };
 		E8646A4C4193364906670CDD /* RoomCaptureRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = E78D94B24D2AB18DA74DD4D3 /* RoomCaptureRepresentable.swift */; };
 		EC6B4FD1E91A04911C370B23 /* ScanRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F1DB39A49C2AFE040165840 /* ScanRecord.swift */; };
 		F40F67FAC6756A4521982309 /* UnitSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 731115085003FD13639169C5 /* UnitSystem.swift */; };
+		FB7495B1C3F63F263082EA57 /* ARSessionStartupPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0705ED6E4A2189A6D95E362 /* ARSessionStartupPolicyTests.swift */; };
 		FDFD28C2A9FBB9D5BC2E4192 /* PointCloudStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF8E4841A5F15A6CB6B38DDE /* PointCloudStore.swift */; };
+		FE55D3D70FA10961CE5E483B /* PointCloudFloorPlanBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F54FCACA0D99205892F2AB0 /* PointCloudFloorPlanBuilder.swift */; };
+		FE9D7DD76C9045E23A94AAEF /* ARSessionStartupPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF486840EB9B88C63E71B382 /* ARSessionStartupPolicy.swift */; };
 		FFB17BA1139C60D758A47AE6 /* VoxelAccumulatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39D1DE8273E831A410C07DEA /* VoxelAccumulatorTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		001C02F9A7CB5D73E04A3065 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
+		0222C9F8EAFEFB97073D0EBE /* ScanDriftBudgetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanDriftBudgetTests.swift; sourceTree = "<group>"; };
 		025F8D38F1A2CB10DF819B29 /* ProScanConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProScanConfigTests.swift; sourceTree = "<group>"; };
 		037614FED6FB7CDAAEE397A2 /* ControlPointTransformTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlPointTransformTests.swift; sourceTree = "<group>"; };
 		04CD39900746A2CE3A2BBA0C /* FrameGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameGate.swift; sourceTree = "<group>"; };
 		06959A398729A01CD14F0E23 /* MeasurementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeasurementsView.swift; sourceTree = "<group>"; };
 		0AB12D9629FB85E352C1EC43 /* StructuraTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = StructuraTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0AFC59EBA2900F7C1712E748 /* ScanMetadataReportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanMetadataReportTests.swift; sourceTree = "<group>"; };
 		0B72DFFFFE3FDB6E4726DB26 /* MeasurementCalibration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeasurementCalibration.swift; sourceTree = "<group>"; };
 		0E6420719C6CCDCD9E4AAB00 /* LocalEngineeringCRS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalEngineeringCRS.swift; sourceTree = "<group>"; };
+		105738FDD02EE01FFCAFA0FA /* AngularVelocityGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AngularVelocityGateTests.swift; sourceTree = "<group>"; };
 		11138480935319AAE2C1B695 /* GraphPaperBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphPaperBackground.swift; sourceTree = "<group>"; };
 		1537BB48F60772F82768EE23 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		1A0C9FE8433D28AE5CC93B98 /* ScanCoverageEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanCoverageEstimator.swift; sourceTree = "<group>"; };
@@ -131,8 +151,9 @@
 		34EE01AB83E39C24C3CD2677 /* CSVExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVExporter.swift; sourceTree = "<group>"; };
 		39CCA3B1E575B48104612FDB /* TopographicAxisConvention.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopographicAxisConvention.swift; sourceTree = "<group>"; };
 		39D1DE8273E831A410C07DEA /* VoxelAccumulatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoxelAccumulatorTests.swift; sourceTree = "<group>"; };
-		3E24924C76C28845B801B82C /* Structura.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Structura.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3E24924C76C28845B801B82C /* Structura.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Structura.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		58CEB5451F53B00528AC8C95 /* PLYExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PLYExporter.swift; sourceTree = "<group>"; };
+		591BEB81B6DEF966A5F214F2 /* DelegateFrameMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DelegateFrameMetricsTests.swift; sourceTree = "<group>"; };
 		5FE7635358A11CE8711970B5 /* VoxelAccumulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoxelAccumulator.swift; sourceTree = "<group>"; };
 		5FF59F030F1091282DA20F00 /* PerformanceMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceMonitor.swift; sourceTree = "<group>"; };
 		6376B851D6604705566F5F6B /* PointCloudLocationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointCloudLocationProvider.swift; sourceTree = "<group>"; };
@@ -146,9 +167,11 @@
 		731115085003FD13639169C5 /* UnitSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnitSystem.swift; sourceTree = "<group>"; };
 		7951C17A6CBF4A1CC20EE401 /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
 		7AADD895A7BB9CAF51FA98FA /* HapticEngineManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticEngineManager.swift; sourceTree = "<group>"; };
+		7F54FCACA0D99205892F2AB0 /* PointCloudFloorPlanBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointCloudFloorPlanBuilder.swift; sourceTree = "<group>"; };
 		83AE0C3A1CE9AA9883A95E13 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		85C91490ECEF1771043D1F26 /* HapticPatterns.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticPatterns.swift; sourceTree = "<group>"; };
 		863FE9E182C6FF0E7485919B /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
+		8700A58F5CFC13210FA72D2A /* DelegateFrameMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DelegateFrameMetrics.swift; sourceTree = "<group>"; };
 		8B01C9230240DE02C68C495B /* BlueprintBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlueprintBackdrop.swift; sourceTree = "<group>"; };
 		8BF9757AE477484E49109ADC /* RelocalizationConfirmationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelocalizationConfirmationTests.swift; sourceTree = "<group>"; };
 		8DF852FB48CD3854642A5602 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -158,6 +181,8 @@
 		A54ECCBFE7B5F5AEE59C49EF /* CornerBrackets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CornerBrackets.swift; sourceTree = "<group>"; };
 		A82CFA8EC1C0711AACED86F2 /* ConfidenceGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfidenceGrid.swift; sourceTree = "<group>"; };
 		AB5CFCB33DF6220B9E48589B /* CameraUnprojectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraUnprojectionTests.swift; sourceTree = "<group>"; };
+		AC9C883EE708825A3774130C /* ScanDriftBudget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanDriftBudget.swift; sourceTree = "<group>"; };
+		AF486840EB9B88C63E71B382 /* ARSessionStartupPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARSessionStartupPolicy.swift; sourceTree = "<group>"; };
 		B3A12DC99636CDF75B52D77B /* ScanCoverageEstimatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanCoverageEstimatorTests.swift; sourceTree = "<group>"; };
 		B5E80BEB0CB670FA03A6DACB /* ScanMetadataReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanMetadataReport.swift; sourceTree = "<group>"; };
 		B7729D532E4D0E3C98E539BC /* LegalLinks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalLinks.swift; sourceTree = "<group>"; };
@@ -165,6 +190,7 @@
 		BEA66209CF36225BA83E1D2F /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		C169CC49A0329771A7CD9DB5 /* PointCloudRaycastTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointCloudRaycastTests.swift; sourceTree = "<group>"; };
 		C6549FB28FD33315C15B8291 /* ProScanCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProScanCoordinator.swift; sourceTree = "<group>"; };
+		C6C98F5A34C84871640FB1C4 /* PointCloudFloorPlanBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointCloudFloorPlanBuilderTests.swift; sourceTree = "<group>"; };
 		CB68E66E52AEDC421E717786 /* CameraUnprojection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraUnprojection.swift; sourceTree = "<group>"; };
 		CDF3EF773791178C6CC128E4 /* PointCloudExportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointCloudExportCoordinator.swift; sourceTree = "<group>"; };
 		CF3817431DAD742081E0F2AC /* PointCloudRaycast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointCloudRaycast.swift; sourceTree = "<group>"; };
@@ -175,8 +201,10 @@
 		D4B9FF8D927E4458DE33319B /* HUDStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HUDStyle.swift; sourceTree = "<group>"; };
 		D7ACE7847F9A758B78A183FD /* FloorPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorPlanView.swift; sourceTree = "<group>"; };
 		DCCE829B7DF4629C92B6C1EE /* PLYRoundTripTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PLYRoundTripTests.swift; sourceTree = "<group>"; };
+		E0705ED6E4A2189A6D95E362 /* ARSessionStartupPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARSessionStartupPolicyTests.swift; sourceTree = "<group>"; };
 		E579F3F6F700D7CBA583130B /* PLYPointCloudReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PLYPointCloudReader.swift; sourceTree = "<group>"; };
 		E78D94B24D2AB18DA74DD4D3 /* RoomCaptureRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomCaptureRepresentable.swift; sourceTree = "<group>"; };
+		E7A2A901EC583E7E87B2FC19 /* AngularVelocityGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AngularVelocityGate.swift; sourceTree = "<group>"; };
 		E9AE11DBB56EE92B5291A229 /* SketchBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchBackdrop.swift; sourceTree = "<group>"; };
 		EBAF40F0AD07E417D2B06870 /* PurchaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseManager.swift; sourceTree = "<group>"; };
 		EE8539560292F05A011D44BB /* FloorPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorPlan.swift; sourceTree = "<group>"; };
@@ -298,10 +326,13 @@
 		7FA4FC237692167BAE569190 /* Capture3D */ = {
 			isa = PBXGroup;
 			children = (
+				E7A2A901EC583E7E87B2FC19 /* AngularVelocityGate.swift */,
 				330F5779F983960E20FDC350 /* ARCameraPassthroughView.swift */,
 				F74DD6FC42414C4695BD1344 /* ARPointCloudSession.swift */,
+				AF486840EB9B88C63E71B382 /* ARSessionStartupPolicy.swift */,
 				CB68E66E52AEDC421E717786 /* CameraUnprojection.swift */,
 				A82CFA8EC1C0711AACED86F2 /* ConfidenceGrid.swift */,
+				8700A58F5CFC13210FA72D2A /* DelegateFrameMetrics.swift */,
 				04CD39900746A2CE3A2BBA0C /* FrameGate.swift */,
 				5FF59F030F1091282DA20F00 /* PerformanceMonitor.swift */,
 				D2E547505D26B5B157184FD5 /* PointCloudFrame.swift */,
@@ -310,6 +341,7 @@
 				271F2E919186953521F31505 /* ProScanConfig.swift */,
 				C6549FB28FD33315C15B8291 /* ProScanCoordinator.swift */,
 				6FFAC2FD4B16FCF9AAC16D39 /* RelocalizationConfirmation.swift */,
+				AC9C883EE708825A3774130C /* ScanDriftBudget.swift */,
 				5FE7635358A11CE8711970B5 /* VoxelAccumulator.swift */,
 			);
 			path = Capture3D;
@@ -351,18 +383,24 @@
 		C6C46B6F23697B59C04DC66F /* StructuraTests */ = {
 			isa = PBXGroup;
 			children = (
+				105738FDD02EE01FFCAFA0FA /* AngularVelocityGateTests.swift */,
+				E0705ED6E4A2189A6D95E362 /* ARSessionStartupPolicyTests.swift */,
 				AB5CFCB33DF6220B9E48589B /* CameraUnprojectionTests.swift */,
 				D3154D5AD72B0748B64663A4 /* ConfidenceGridTests.swift */,
 				037614FED6FB7CDAAEE397A2 /* ControlPointTransformTests.swift */,
+				591BEB81B6DEF966A5F214F2 /* DelegateFrameMetricsTests.swift */,
 				2D90AF1927E076EB7FF58516 /* LASExporterTests.swift */,
 				974B4A9218725836CE01FD19 /* MeasurementCalibrationTests.swift */,
 				F054DFD72611CCD8A73FD833 /* PlaneSnappingTests.swift */,
 				DCCE829B7DF4629C92B6C1EE /* PLYRoundTripTests.swift */,
+				C6C98F5A34C84871640FB1C4 /* PointCloudFloorPlanBuilderTests.swift */,
 				344810CD56088BCE1FB40BAC /* PointCloudMeshClassificationTests.swift */,
 				C169CC49A0329771A7CD9DB5 /* PointCloudRaycastTests.swift */,
 				025F8D38F1A2CB10DF819B29 /* ProScanConfigTests.swift */,
 				8BF9757AE477484E49109ADC /* RelocalizationConfirmationTests.swift */,
 				B3A12DC99636CDF75B52D77B /* ScanCoverageEstimatorTests.swift */,
+				0222C9F8EAFEFB97073D0EBE /* ScanDriftBudgetTests.swift */,
+				0AFC59EBA2900F7C1712E748 /* ScanMetadataReportTests.swift */,
 				21CC56301B0D1D6A257592C3 /* TopographicAxisConventionTests.swift */,
 				39D1DE8273E831A410C07DEA /* VoxelAccumulatorTests.swift */,
 			);
@@ -408,6 +446,7 @@
 				FA100951FD632BFEE1AF830D /* MeasurementSession.swift */,
 				06959A398729A01CD14F0E23 /* MeasurementsView.swift */,
 				BA8E155518A8EE8202AB3A05 /* PlaneSnapping.swift */,
+				7F54FCACA0D99205892F2AB0 /* PointCloudFloorPlanBuilder.swift */,
 				CF3817431DAD742081E0F2AC /* PointCloudRaycast.swift */,
 				71F6F0279CCC63A93FC857E6 /* PointCloudSceneView.swift */,
 				FA76854C563F8F4C3BC05788 /* ResultView.swift */,
@@ -470,6 +509,7 @@
 						ProvisioningStyle = Automatic;
 					};
 					94CA7CF704526B65A5B788B7 = {
+						DevelopmentTeam = WREX368LLS;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -513,12 +553,18 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FE9D7DD76C9045E23A94AAEF /* ARSessionStartupPolicy.swift in Sources */,
+				FB7495B1C3F63F263082EA57 /* ARSessionStartupPolicyTests.swift in Sources */,
+				B19673AE1527FA2D9CE2C50F /* AngularVelocityGate.swift in Sources */,
+				33F516D6E2719891BB3680CF /* AngularVelocityGateTests.swift in Sources */,
 				402952AE79DAD9BCF67FB934 /* CameraUnprojection.swift in Sources */,
 				8B965377CF854C7E639BCB8A /* CameraUnprojectionTests.swift in Sources */,
 				6638C79556C6715CD274E4CD /* ConfidenceGrid.swift in Sources */,
 				510A606A473B5A743EB1A360 /* ConfidenceGridTests.swift in Sources */,
 				8667BA582A05A85C7E4D9FE9 /* ControlPointTransform.swift in Sources */,
 				1BC6DD4B091DD660414A23C6 /* ControlPointTransformTests.swift in Sources */,
+				2830507F17C08E68985794C2 /* DelegateFrameMetrics.swift in Sources */,
+				E19F93C3F6BB43BFC94359D1 /* DelegateFrameMetricsTests.swift in Sources */,
 				C37E083C998838898C4C8A6C /* LASExporter.swift in Sources */,
 				10DF4B8B1D8AF3C71F78E963 /* LASExporterTests.swift in Sources */,
 				D7D5FA1CDA08E28E9205B640 /* LocalEngineeringCRS.swift in Sources */,
@@ -530,6 +576,8 @@
 				5AF58793170F18DF68ABE9A7 /* PlaneSnapping.swift in Sources */,
 				D61F47CA037B009418BB0A07 /* PlaneSnappingTests.swift in Sources */,
 				2AFED78E25F4F94C8E3103B5 /* PointCloudExportModels.swift in Sources */,
+				FE55D3D70FA10961CE5E483B /* PointCloudFloorPlanBuilder.swift in Sources */,
+				25222D3D9AE1FED8041A17B1 /* PointCloudFloorPlanBuilderTests.swift in Sources */,
 				757939FE753E42A234E1A50E /* PointCloudMeshClassification.swift in Sources */,
 				BD71DFEA1311CD837094325F /* PointCloudMeshClassificationTests.swift in Sources */,
 				0A0F539B19173DFD236DE9F6 /* PointCloudRaycast.swift in Sources */,
@@ -540,6 +588,10 @@
 				B826659AFA7306C0ED00F1FD /* RelocalizationConfirmationTests.swift in Sources */,
 				E54A39E628C41B4646B1EDC1 /* ScanCoverageEstimator.swift in Sources */,
 				E113694ED1E0145766B0F97D /* ScanCoverageEstimatorTests.swift in Sources */,
+				8427EE3BCC1D65A7F2D98475 /* ScanDriftBudget.swift in Sources */,
+				AB553A574E302792B3359F42 /* ScanDriftBudgetTests.swift in Sources */,
+				2C6893F22EDC4062F0D2FC20 /* ScanMetadataReport.swift in Sources */,
+				3B62D35E868869AA51AACD41 /* ScanMetadataReportTests.swift in Sources */,
 				9B408A13C592BD3A6B0F4560 /* TopographicAxisConvention.swift in Sources */,
 				9D6BD1E26F1578631F8D411A /* TopographicAxisConventionTests.swift in Sources */,
 				BC12EE9763B89B5CB82023A4 /* VoxelAccumulator.swift in Sources */,
@@ -553,7 +605,9 @@
 			files = (
 				1284DB1F16E071E82A12695F /* ARCameraPassthroughView.swift in Sources */,
 				D7B8E1605F46847294029568 /* ARPointCloudSession.swift in Sources */,
+				807FD3E548D4E6ABCC90A1CF /* ARSessionStartupPolicy.swift in Sources */,
 				068AF9DFCA660426EF2D1FA2 /* ActivityView.swift in Sources */,
+				D43526D96C09C0C59D9036C2 /* AngularVelocityGate.swift in Sources */,
 				568BD69819C863FE264B56B9 /* BlueprintBackdrop.swift in Sources */,
 				039F6D7201A15CB8C4973DB6 /* CSVExporter.swift in Sources */,
 				897CEC7D157E878822445F58 /* CameraUnprojection.swift in Sources */,
@@ -561,6 +615,7 @@
 				02A2BF9EE909FFDD2DF7B745 /* ConfidenceGrid.swift in Sources */,
 				318A8191D2B2E91D011C9F1C /* ControlPointTransform.swift in Sources */,
 				3B64A9FBA94EC287070C23CF /* CornerBrackets.swift in Sources */,
+				95AD81FBF96001C01C86D5F4 /* DelegateFrameMetrics.swift in Sources */,
 				4788EC9B50127DCD5BD71B88 /* DollhouseSceneView.swift in Sources */,
 				9D6E08814FE36A6948F9D9A8 /* FloorPlan.swift in Sources */,
 				540E4E05FC31D406F8BDC7A6 /* FloorPlanView.swift in Sources */,
@@ -588,6 +643,7 @@
 				35B8136544889A2A68237486 /* PlaneSnapping.swift in Sources */,
 				B85359E99234862454A27F2E /* PointCloudExportCoordinator.swift in Sources */,
 				BD88D819C06C7E5327D12DEF /* PointCloudExportModels.swift in Sources */,
+				4FD48B41CD7D819EC0048D34 /* PointCloudFloorPlanBuilder.swift in Sources */,
 				940A531076C50AF139E80AA7 /* PointCloudFrame.swift in Sources */,
 				C36DAC0A00689BDC7E1BD21E /* PointCloudLocationProvider.swift in Sources */,
 				39B83B4E689E561E1760224E /* PointCloudMeshClassification.swift in Sources */,
@@ -604,6 +660,7 @@
 				E4F256CC6E3FCA46E0BCAF9C /* ResultView.swift in Sources */,
 				E8646A4C4193364906670CDD /* RoomCaptureRepresentable.swift in Sources */,
 				B41A16425DD8E4F0FEA7FA9F /* ScanCoverageEstimator.swift in Sources */,
+				116B205D6EB864B0F5A2801F /* ScanDriftBudget.swift in Sources */,
 				E19E8EA5B1C5E1DD218EA6E4 /* ScanMetadataReport.swift in Sources */,
 				EC6B4FD1E91A04911C370B23 /* ScanRecord.swift in Sources */,
 				AB10C18997BD74B42E6505FB /* ScanStore.swift in Sources */,
@@ -647,7 +704,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = X4AZJ3DWHB;
+				DEVELOPMENT_TEAM = WREX368LLS;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Structura/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -808,7 +865,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = X4AZJ3DWHB;
+				DEVELOPMENT_TEAM = WREX368LLS;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Structura/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
