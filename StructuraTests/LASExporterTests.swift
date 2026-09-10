@@ -252,6 +252,140 @@ final class LASExporterTests: XCTestCase {
 
     // MARK: - Empty input
 
+    // MARK: - Streaming
+
+    /// Offset to the first point record, read from the header rather than
+    /// assumed, so these tests don't silently drift if the VLR's length ever
+    /// changes.
+    private func pointDataOffset(_ data: Data) -> Int {
+        Int(loadLE(data, at: 96, as: UInt32.self))
+    }
+
+    private func point(atIndex index: Int, in data: Data) -> (x: Int32, y: Int32, z: Int32, intensity: UInt16) {
+        let base = pointDataOffset(data) + index * Int(LASExporter.pointRecordLength)
+        return (
+            loadLE(data, at: base, as: Int32.self),
+            loadLE(data, at: base + 4, as: Int32.self),
+            loadLE(data, at: base + 8, as: Int32.self),
+            loadLE(data, at: base + 12, as: UInt16.self)
+        )
+    }
+
+    /// The failure mode streaming introduces that a single in-memory buffer
+    /// could not have: a record dropped or duplicated where one batch is
+    /// flushed and the next begins. Deliberately uses a count that is *not*
+    /// a multiple of the batch size, so the final partial flush is exercised
+    /// too.
+    func testWriteSpanningMultipleBatchesKeepsEveryRecordExactlyOnce() throws {
+        let count = LASExporter.pointsPerBatch * 2 + 37
+        // A distinct, monotonically increasing X per point, so any dropped,
+        // duplicated or reordered record shows up as a mismatch rather than
+        // hiding among identical values.
+        let points = (0..<count).map { index in
+            PointCloudExportPoint(position: SIMD3<Float>(Float(index) * 0.01, 0, 0), confidence: 1.0)
+        }
+        let (url, data) = try writeTempLAS(points)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        XCTAssertEqual(loadLE(data, at: 247, as: UInt64.self), UInt64(count))
+        XCTAssertEqual(
+            data.count,
+            pointDataOffset(data) + count * Int(LASExporter.pointRecordLength),
+            "File length must be exactly the preamble plus one record per point."
+        )
+
+        // Spot-check both sides of every batch boundary, plus the ends.
+        var indicesToCheck = [0, count - 1]
+        for boundary in stride(from: LASExporter.pointsPerBatch, to: count, by: LASExporter.pointsPerBatch) {
+            indicesToCheck.append(contentsOf: [boundary - 1, boundary])
+        }
+        let scale = ProScanConfig.lasScaleFactorMeters
+        for index in indicesToCheck {
+            let record = point(atIndex: index, in: data)
+            // X is stored relative to the header's offset, which is the
+            // minimum — here that's point 0, so the expected value is just
+            // the point's own distance from it.
+            let expected = Int32((Double(index) * 0.01 / scale).rounded())
+            XCTAssertEqual(record.x, expected, accuracy: 1, "Record \(index) is not the point that belongs at that position.")
+        }
+    }
+
+    /// The header's bounding box is computed in a first pass and the records
+    /// in a second. Nothing but this test forces those two passes to agree —
+    /// and a header describing a box its own records fall outside is exactly
+    /// the kind of file that imports into survey tooling and then misbehaves.
+    func testHeaderBoundsAgreeWithTheRecordsActuallyWritten() throws {
+        let points = (0..<(LASExporter.pointsPerBatch + 500)).map { index -> PointCloudExportPoint in
+            let angle = Float(index) * 0.05
+            return PointCloudExportPoint(
+                position: SIMD3<Float>(cos(angle) * 3, Float(index) * 0.002, sin(angle) * 3),
+                confidence: 1.0
+            )
+        }
+        let (url, data) = try writeTempLAS(points)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let scale = loadLE(data, at: 131, as: Double.self)
+        let offsetX = loadLE(data, at: 155, as: Double.self)
+        let maxXHeader = loadLE(data, at: 179, as: Double.self)
+        let minXHeader = loadLE(data, at: 187, as: Double.self)
+
+        var minXRecords = Double.greatestFiniteMagnitude
+        var maxXRecords = -Double.greatestFiniteMagnitude
+        for index in 0..<points.count {
+            let x = Double(point(atIndex: index, in: data).x) * scale + offsetX
+            minXRecords = min(minXRecords, x)
+            maxXRecords = max(maxXRecords, x)
+        }
+
+        // Within one scale unit (1 mm): the records are quantized to the
+        // scale factor, the header's bounds are not.
+        XCTAssertEqual(minXHeader, minXRecords, accuracy: scale)
+        XCTAssertEqual(maxXHeader, maxXRecords, accuracy: scale)
+    }
+
+    /// Streaming writes through a sibling temp file and renames it into
+    /// place; nothing may be left behind either way.
+    func testWriteLeavesNoTemporaryFileBehind() throws {
+        let directory = FileManager.default.temporaryDirectory
+        let baseName = "las_notemp_\(UUID().uuidString)"
+        let metadata = PointCloudExportMetadata(capturedAt: Date(), location: nil, pointCount: 1)
+        let url = try LASExporter.write(
+            [PointCloudExportPoint(position: SIMD3<Float>(1, 1, 1), confidence: 1)],
+            metadata: metadata,
+            to: directory,
+            baseName: baseName
+        )
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let siblings = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+        let strays = siblings.filter { $0.hasPrefix(baseName) && $0 != url.lastPathComponent }
+        XCTAssertTrue(strays.isEmpty, "No .tmp staging file should remain: \(strays)")
+    }
+
+    /// Re-exporting the same scan must replace the previous file rather than
+    /// fail or append — the rename-into-place path over an existing file.
+    func testWritingOverAnExistingFileReplacesIt() throws {
+        let directory = FileManager.default.temporaryDirectory
+        let baseName = "las_overwrite_\(UUID().uuidString)"
+        let metadata = PointCloudExportMetadata(capturedAt: Date(), location: nil, pointCount: 1)
+
+        let firstURL = try LASExporter.write(
+            (0..<10).map { PointCloudExportPoint(position: SIMD3<Float>(Float($0), 0, 0), confidence: 1) },
+            metadata: metadata, to: directory, baseName: baseName
+        )
+        let secondURL = try LASExporter.write(
+            (0..<3).map { PointCloudExportPoint(position: SIMD3<Float>(Float($0), 0, 0), confidence: 1) },
+            metadata: metadata, to: directory, baseName: baseName
+        )
+        defer { try? FileManager.default.removeItem(at: secondURL) }
+
+        XCTAssertEqual(firstURL, secondURL)
+        let data = try Data(contentsOf: secondURL)
+        XCTAssertEqual(loadLE(data, at: 247, as: UInt64.self), 3, "The rewritten file must describe the second export, not the first.")
+        XCTAssertEqual(data.count, pointDataOffset(data) + 3 * Int(LASExporter.pointRecordLength))
+    }
+
     func testEmptyPointCloudThrows() {
         let metadata = PointCloudExportMetadata(capturedAt: Date(), location: nil, pointCount: 0)
         XCTAssertThrowsError(try LASExporter.write([], metadata: metadata, to: FileManager.default.temporaryDirectory, baseName: "empty")) { error in

@@ -9,6 +9,14 @@ import simd
 /// (asprs.org) — not reconstructed from memory. No third-party dependency,
 /// no LAZ compression.
 ///
+/// Memory: the file is streamed to disk in `pointsPerBatch` batches through
+/// one reusable buffer, never assembled whole in memory — the exporter's own
+/// footprint is a fixed few hundred KB whatever the scan's size. (The
+/// caller's `points` array is still fully resident; making the *whole*
+/// pipeline constant-memory would require streaming the source too.) The
+/// bounds the header needs come from a separate first pass over the same
+/// array rather than from a stored copy of the rotated positions.
+///
 /// Coordinate systems: positions arrive in ARKit's right-handed +Y-up
 /// world space; every point is rotated to the right-handed +Z-up
 /// convention civil/CAD tooling expects (see `TopographicAxisConvention`)
@@ -58,6 +66,12 @@ enum LASExporter {
     private static let wktVLRRecordID: UInt16 = 2112
     static let vlrHeaderSize = 54
 
+    /// Points per flush to the `FileHandle`, mirroring `PLYExporter`'s own
+    /// batching. Large enough to amortize the syscall over many records,
+    /// small enough that the reusable staging buffer stays a fixed ~144 KB
+    /// regardless of how large the scan is.
+    static let pointsPerBatch = 4_096
+
     static func write(
         _ points: [PointCloudExportPoint],
         metadata: PointCloudExportMetadata,
@@ -67,54 +81,133 @@ enum LASExporter {
     ) throws -> URL {
         guard !points.isEmpty else { throw ExportError.emptyPointCloud }
 
-        // Rotate every point into the Z-up frame Civil3D/CAD tooling
-        // expects before computing bounds/scaling — the bounds must
-        // reflect the coordinates actually written, not the pre-rotation
-        // ARKit ones. `controlPoint`, if supplied, then shifts the origin
-        // to a real site coordinate (translation only — see
-        // `ControlPointTransform`'s doc comment).
-        let rotatedPositions = points.map { point -> SIMD3<Float> in
-            let zUp = TopographicAxisConvention.convert(point.position)
-            return controlPoint.map { $0.apply(zUp) } ?? zUp
-        }
-
-        var minX = Double(rotatedPositions[0].x), maxX = minX
-        var minY = Double(rotatedPositions[0].y), maxY = minY
-        var minZ = Double(rotatedPositions[0].z), maxZ = minZ
-        for position in rotatedPositions {
-            let x = Double(position.x), y = Double(position.y), z = Double(position.z)
-            minX = min(minX, x); maxX = max(maxX, x)
-            minY = min(minY, y); maxY = max(maxY, y)
-            minZ = min(minZ, z); maxZ = max(maxZ, z)
-        }
-
+        let bounds = topographicBounds(of: points, controlPoint: controlPoint)
         let scale = ProScanConfig.lasScaleFactorMeters
-        let offsetX = minX, offsetY = minY, offsetZ = minZ
+        let offset = (x: bounds.minX, y: bounds.minY, z: bounds.minZ)
 
         let wkt = controlPoint.map { LocalEngineeringCRS.wktDescriptionAnchoredToControlPoint(declaredAccuracyMeters: $0.declaredAccuracyMeters) }
             ?? LocalEngineeringCRS.wktDescription
         let vlrBodySize = wkt.utf8.count + 1 // null-terminated, per LAS 1.4 §3.2.2
         let vlrTotalSize = vlrHeaderSize + vlrBodySize
 
-        var data = Data(capacity: Int(headerSize) + vlrTotalSize + points.count * Int(pointRecordLength))
-
+        // Header plus VLR only — a few hundred bytes, not a function of the
+        // point count.
+        var preamble = Data(capacity: Int(headerSize) + vlrTotalSize)
         appendHeader(
-            to: &data,
+            to: &preamble,
             pointCount: UInt64(points.count),
             scale: scale,
-            offset: (offsetX, offsetY, offsetZ),
-            bounds: (minX, maxX, minY, maxY, minZ, maxZ),
+            offset: (offset.x, offset.y, offset.z),
+            bounds: (bounds.minX, bounds.maxX, bounds.minY, bounds.maxY, bounds.minZ, bounds.maxZ),
             offsetToPointData: UInt32(Int(headerSize) + vlrTotalSize),
             capturedAt: metadata.capturedAt
         )
-        appendWKTVLR(to: &data, wkt: wkt)
+        appendWKTVLR(to: &preamble, wkt: wkt)
 
-        let gpsTime = standardGPSTime(for: metadata.capturedAt)
+        let url = directory.appendingPathComponent("\(baseName).las")
+        // Streamed to a sibling temp file, then moved into place — same
+        // reasoning as `PLYExporter.write`: a same-volume rename is atomic,
+        // preserving the all-or-nothing guarantee the previous
+        // `Data.write(options: .atomic)` gave without needing the whole
+        // file resident to get it.
+        let temporaryURL = directory.appendingPathComponent("\(baseName).las.\(UUID().uuidString).tmp")
+
+        do {
+            try writeStreaming(
+                points,
+                preamble: preamble,
+                scale: scale,
+                offset: offset,
+                controlPoint: controlPoint,
+                gpsTime: standardGPSTime(for: metadata.capturedAt),
+                to: temporaryURL
+            )
+        } catch {
+            try? FileManager.default.removeItem(at: temporaryURL)
+            throw ExportError.writeFailed(underlying: error)
+        }
+
+        do {
+            if FileManager.default.fileExists(atPath: url.path) {
+                _ = try FileManager.default.replaceItemAt(url, withItemAt: temporaryURL)
+            } else {
+                try FileManager.default.moveItem(at: temporaryURL, to: url)
+            }
+        } catch {
+            try? FileManager.default.removeItem(at: temporaryURL)
+            throw ExportError.writeFailed(underlying: error)
+        }
+
+        return url
+    }
+
+    /// Bounding box of the coordinates that will actually be written.
+    ///
+    /// Rotates each point into the +Z-up frame Civil3D/CAD tooling expects
+    /// (and applies `controlPoint`'s origin shift, if any) *on the fly*
+    /// rather than materializing a rotated copy of every position: the
+    /// header needs these bounds before the first record can be written, and
+    /// the conversion is a cheap axis swap, so paying for it twice costs far
+    /// less than holding a second full array of positions in memory.
+    private static func topographicBounds(
+        of points: [PointCloudExportPoint],
+        controlPoint: ControlPointTransform?
+    ) -> (minX: Double, maxX: Double, minY: Double, maxY: Double, minZ: Double, maxZ: Double) {
+        let first = topographicPosition(of: points[0], controlPoint: controlPoint)
+        var minX = Double(first.x), maxX = minX
+        var minY = Double(first.y), maxY = minY
+        var minZ = Double(first.z), maxZ = minZ
+
+        for point in points.dropFirst() {
+            let position = topographicPosition(of: point, controlPoint: controlPoint)
+            let x = Double(position.x), y = Double(position.y), z = Double(position.z)
+            minX = min(minX, x); maxX = max(maxX, x)
+            minY = min(minY, y); maxY = max(maxY, y)
+            minZ = min(minZ, z); maxZ = max(maxZ, z)
+        }
+        return (minX, maxX, minY, maxY, minZ, maxZ)
+    }
+
+    /// The single definition of "where does this point sit in the exported
+    /// frame", used by both the bounds pass and the record-writing pass —
+    /// the two must agree exactly, or the header would describe a box the
+    /// records don't fall inside.
+    private static func topographicPosition(
+        of point: PointCloudExportPoint,
+        controlPoint: ControlPointTransform?
+    ) -> SIMD3<Float> {
+        let zUp = TopographicAxisConvention.convert(point.position)
+        return controlPoint.map { $0.apply(zUp) } ?? zUp
+    }
+
+    /// Writes the preamble, then streams the point records in fixed-size
+    /// batches through one reusable buffer. Throws (rather than silently
+    /// truncating) on any I/O failure partway through — the caller removes
+    /// the partial temp file either way, so a failure here never leaves a
+    /// corrupt file at the real destination.
+    private static func writeStreaming(
+        _ points: [PointCloudExportPoint],
+        preamble: Data,
+        scale: Double,
+        offset: (x: Double, y: Double, z: Double),
+        controlPoint: ControlPointTransform?,
+        gpsTime: Double,
+        to url: URL
+    ) throws {
+        guard FileManager.default.createFile(atPath: url.path, contents: nil) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        let handle = try FileHandle(forWritingTo: url)
+        defer { try? handle.close() }
+
+        try handle.write(contentsOf: preamble)
+
+        var buffer = Data(capacity: pointsPerBatch * Int(pointRecordLength))
         for (index, point) in points.enumerated() {
-            let position = rotatedPositions[index]
-            let x = Int32(((Double(position.x) - offsetX) / scale).rounded())
-            let y = Int32(((Double(position.y) - offsetY) / scale).rounded())
-            let z = Int32(((Double(position.z) - offsetZ) / scale).rounded())
+            let position = topographicPosition(of: point, controlPoint: controlPoint)
+            let x = Int32(((Double(position.x) - offset.x) / scale).rounded())
+            let y = Int32(((Double(position.y) - offset.y) / scale).rounded())
+            let z = Int32(((Double(position.z) - offset.z) / scale).rounded())
             // Fase 2, finding E2: a point whose confidence is only ever a
             // fallback (`isConfidenceObserved == false`) must not be
             // written as a number indistinguishable from a real
@@ -124,41 +217,43 @@ enum LASExporter {
                 ? UInt16(clamping: Int((point.confidence * 65535).rounded()))
                 : Self.unobservedConfidenceIntensity
 
-            appendLE(&data, x)
-            appendLE(&data, y)
-            appendLE(&data, z)
-            appendLE(&data, intensity)
+            appendLE(&buffer, x)
+            appendLE(&buffer, y)
+            appendLE(&buffer, z)
+            appendLE(&buffer, intensity)
             // Return Number=1 (bits 0-3), Number of Returns=1 (bits 4-7):
             // every fused mesh point is its own single return. Fixes the
             // audit's finding that this byte was always 0 — which silently
             // discards every point under a standard `return_number == 1`
             // first-return filter, the routine way civil workflows extract
             // a surface from a point cloud.
-            data.append(0x11)
+            buffer.append(0x11)
             // Classification Flags / Scanner Channel / Scan Direction /
             // Edge of Flight Line — none apply to a fused mesh vertex.
-            data.append(0x00)
-            data.append(point.classification.lasClassificationCode)
-            data.append(0) // User Data
+            buffer.append(0x00)
+            buffer.append(point.classification.lasClassificationCode)
+            buffer.append(0) // User Data
             // Scan Angle: no single originating pulse angle exists for a
             // fused mesh vertex. The spec's own guidance for "Aggregate
             // Model Systems" (LAS 1.4 §2.6.7) is to set this to zero unless
             // assigned from a component measurement — exactly this case.
-            appendLE(&data, Int16(0))
-            appendLE(&data, UInt16(0)) // Point Source ID — single source
-            appendLE(&data, gpsTime)
-            appendLE(&data, UInt16(clamping: Int((point.color.x * 65535).rounded())))
-            appendLE(&data, UInt16(clamping: Int((point.color.y * 65535).rounded())))
-            appendLE(&data, UInt16(clamping: Int((point.color.z * 65535).rounded())))
-        }
+            appendLE(&buffer, Int16(0))
+            appendLE(&buffer, UInt16(0)) // Point Source ID — single source
+            appendLE(&buffer, gpsTime)
+            appendLE(&buffer, UInt16(clamping: Int((point.color.x * 65535).rounded())))
+            appendLE(&buffer, UInt16(clamping: Int((point.color.y * 65535).rounded())))
+            appendLE(&buffer, UInt16(clamping: Int((point.color.z * 65535).rounded())))
 
-        let url = directory.appendingPathComponent("\(baseName).las")
-        do {
-            try data.write(to: url, options: .atomic)
-        } catch {
-            throw ExportError.writeFailed(underlying: error)
+            if (index + 1) % pointsPerBatch == 0 {
+                try handle.write(contentsOf: buffer)
+                // `removeAll(keepingCapacity: true)` so the batch's storage
+                // is reused instead of reallocated once per flush.
+                buffer.removeAll(keepingCapacity: true)
+            }
         }
-        return url
+        if !buffer.isEmpty {
+            try handle.write(contentsOf: buffer)
+        }
     }
 
     private static func appendHeader(
