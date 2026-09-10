@@ -1,8 +1,17 @@
-# F0/F1/F2/F3(parcial)/F4 — Progreso de implementación (Structura)
+# F0/F1/F2/F3/F4 — Progreso de implementación (Structura)
 
-Estado: **F0, F1 y F2 completos**; **F4 tiene su núcleo algorítmico implementado y cubierto con pruebas sintéticas, pendiente de validación en dispositivo real antes de conectarse a la UI**; **F3 parcialmente implementado** (E4 y E6 resueltos; la parte de `ARWorldMap` queda deliberadamente sin tocar — ver sección propia). Según el plan de `auditoria-arquitectura-97aeb63.md`.
+Estado: **F0, F1, F2 completos**; **F3 completo** (E4 y E6 resueltos; continuidad de `ARWorldMap` entre pases de Pro Scan sobre el mismo nombre de escaneo, implementada — ver sección propia); **F4 conectado a la UI detrás de un flag de debug**, todavía sin validar contra un escaneo real; **F5 sin empezar**, ver nota al final. Según el plan de `auditoria-arquitectura-97aeb63.md`.
 
-Rama: `f1/acumulador-incremental`. Todo commiteado localmente; el push a GitHub está pendiente de correrse desde una máquina con acceso real al repo (ver `HANDOFF.md`).
+Rama: `f1/acumulador-incremental`, pusheada a GitHub. Todo lo de abajo — incluida la sesión de Claude Code local que compiló esto por primera vez — ya está en `origin/f1/acumulador-incremental`.
+
+## Sesión de Claude Code local (09/09/2026) — primera compilación real
+
+Todo lo de arriba (commits 1-10) se escribió en un sandbox de Cowork sin Xcode ni dispositivo. Esta fue la primera vez que pasó por un compilador real:
+
+- `5d5b1f1` — 3 bugs reales que nunca se habían compilado: falta `import Foundation` en `ConfidenceGrid.swift`; `DelegateFrameMetrics` medía la ventana de FPS desde el reloj del callback (`now`) en vez del timestamp de ARKit (`frameTimestamp`), lo que desalineaba la ventana cuando ambos no coincidían exactamente — expuesto por su propio test sintético; dos asserts de test sin desenvolver `Float?`. Build de dispositivo y los 195 tests de `StructuraTests` en verde después.
+- `2674af2` — Resuelve las dos decisiones de producto que quedaban abiertas (ver secciones F3 y F4 abajo): continuidad de `ARWorldMap` por nombre de escaneo, y F4 conectado a `ResultView` detrás de `#if DEBUG`.
+
+Verificado con `xcodegen generate` + build de dispositivo (Debug y Release, ambos en verde — Release confirma que `#if DEBUG` realmente excluye el código de F4) + los 195 tests. **Sin probar en el iPhone real todavía** — no hubo acceso físico al dispositivo durante esta sesión (estaba con Cristian, no con la Mac). Antes de dar por buena la continuidad de `ARWorldMap` en particular, hace falta un pase real: nombrar dos escaneos igual, confirmar que aparece el diálogo de continuar, y confirmar que el segundo pase efectivamente comparte el marco de referencia del primero.
 
 ## Commits
 
@@ -36,14 +45,14 @@ Rama: `f1/acumulador-incremental`. Todo commiteado localmente; el push a GitHub 
 - **E6:** el arranque de Pro Scan ya no espera un `asyncAfter(0.3)` fijo — intenta `session.run()` de inmediato y, si ARKit reporta `didFailWithError` muy poco después (< 1 s, el conflicto típico de "RoomPlan todavía no soltó la cámara"), reintenta con backoff exponencial (100/200/400/800 ms, hasta 5 intentos) en vez de adivinar un tiempo fijo. **Supuesto sin confirmar en dispositivo real:** que ARKit efectivamente falla rápido en ese conflicto, en vez de arrancar en silencio sin frames — revisar esto con un iPhone real antes de confiar del todo.
 - **E4:** el aviso de "escaneo largo" ya no depende de un tope fijo de 40 s — se calcula con un presupuesto de distancia recorrida + rotación acumulada (reutiliza la matemática de `AngularVelocityGate`), que se parece mucho más a la deriva real de ARKit (sin loop closure) que el tiempo transcurrido. Umbrales (15 m / ~4 vueltas) son placeholders de ingeniería explícitos, sin calibrar contra una medición real de deriva.
 
-**Lo que NO se implementó de F3, a propósito — necesita una decisión de Cristian:**
+**ARWorldMap — implementado en la sesión de Claude Code local del 09/09/2026, ver más abajo.**
 
-El plan original también pedía "persistir y recargar `ARWorldMap`... compartir world map entre RoomPlan y ProScan". Esto se dejó sin tocar porque:
+El plan original también pedía "persistir y recargar `ARWorldMap`... compartir world map entre RoomPlan y ProScan". Se implementó solo la primera mitad:
 
-1. Persistir/recargar un `ARWorldMap` **dentro de un mismo pase de Pro Scan** (entre sesiones de la propia `ARPointCloudSession`) es factible con la API documentada de Apple (`ARSession.getCurrentWorldMap`, `ARWorldTrackingConfiguration.initialWorldMap`).
-2. Pero **compartir ese world map con RoomPlan** — la otra mitad de lo que pedía el plan — no tiene, hasta donde se pudo confirmar sin acceso a la documentación de Apple ni a un dispositivo real, una API pública de `RoomCaptureSession` para extraer o inyectar un `ARWorldMap`. RoomPlan administra su propia `ARSession` internamente. Escribir código contra una API que podría no existir, sin poder compilarlo ni probarlo en este entorno, es peor que no escribir nada.
+1. Persistir/recargar un `ARWorldMap` **dentro de un mismo pase de Pro Scan** (entre sesiones de la propia `ARPointCloudSession`) es factible con la API documentada de Apple (`ARSession.getCurrentWorldMap`, `ARWorldTrackingConfiguration.initialWorldMap`) — **implementado**.
+2. **Compartir ese world map con RoomPlan** — la otra mitad de lo que pedía el plan — sigue sin implementarse: no hay, hasta donde se pudo confirmar, una API pública de `RoomCaptureSession` para extraer o inyectar un `ARWorldMap`. RoomPlan administra su propia `ARSession` internamente. Sigue fuera de alcance.
 
-La alternativa más segura y con valor real (directamente conectada al objetivo #3 del proyecto — seguimiento de obra por fases) es: persistir el `ARWorldMap` de Pro Scan al terminar un pase, asociado al proyecto/fase del `ScanRecord`, y ofrecer recargarlo en un pase posterior **de Pro Scan sobre la misma fase** — sin tocar RoomPlan en absoluto. Esto todavía no se implementó porque implica decisiones de producto (¿dónde se guarda el world map por proyecto/fase? ¿cómo elige el usuario "continuar la fase anterior"?) que conviene confirmar con Cristian antes de escribir código a ciegas.
+Lo implementado: `Structura/Capture3D/WorldMapStore.swift` persiste el world map de un pase de Pro Scan al terminar, clave por **nombre del escaneo** (no por proyecto/fase — `ScanRecord` no tiene ese campo hoy; Cristian eligió explícitamente identificar continuidad por nombre en vez de agregar un campo nuevo al modelo de datos o postergar esto). `ARPointCloudSession.start(...)` acepta `initialWorldMap:`; `ProScanCaptureView` detecta un world map guardado con el mismo nombre al abrir y ofrece un diálogo "Continuar ese escaneo" / "Empezar de cero". **Sin validar en dispositivo real** — ver la sección de la sesión local arriba para el pase de prueba pendiente.
 
 ## F4 — Plano 2D desde la nube de puntos propia (objetivo #2 del proyecto)
 
@@ -58,7 +67,7 @@ Pipeline, Swift/simd puro sin ARKit/RoomPlan (compila en el target de tests sin 
 
 **Importante — sin validar contra dispositivo real todavía.** Cada función tiene pruebas con datos sintéticos (habitación rectangular limpia, ruido inyectado, techo/mueble como confusor, múltiples habitaciones), lo cual no es lo mismo que "validado". La altura de la franja de pared (1 m sobre el piso), el grosor de la franja (15 cm) y el umbral de inlier de RANSAC (3 cm) son placeholders de ingeniería, no valores calibrados contra un escaneo LiDAR real de una habitación amueblada e imperfecta — mismo espíritu de advertencia que ya tenía el comentario de `PlaneSnapping`. Tampoco hay compilador disponible en este entorno de trabajo: las pruebas nuevas están revisadas a mano y con chequeo de balance de llaves/paréntesis, pero el caso extremo a extremo (`testBuildRecoversARectangularRoomEndToEnd`) depende de que RANSAC encuentre las 4 líneas con la semilla fija por defecto — es la prueba de más riesgo de fallar al compilar/correr por primera vez en Xcode; vale la pena confirmarla ahí antes de confiar en el resto.
 
-**Decisión de producto pendiente, no resuelta acá a propósito:** cómo mostrar esta salida — ¿reemplaza el plano de `FloorPlanView` (hoy basado en RoomPlan), se muestra lado a lado para comparar, o queda detrás de un flag de depuración hasta validarse en dispositivo? Cristian eligió explícitamente "todavía no decidir, seguir con F3" cuando se le preguntó — sigue abierta.
+**Decisión de producto — resuelta en la sesión de Claude Code local del 09/09/2026:** detrás de un flag de debug. `Structura/Result/PointCloudFloorPlanDebugView.swift` conecta el builder a una pestaña "Plano (exp.)" en `ResultView`, compilada solo en `#if DEBUG` (verificado que un build Release la excluye). No reemplaza `FloorPlanView` ni se muestra lado a lado — Cristian eligió la opción de menor riesgo dado que el algoritmo solo tiene cobertura sintética. Sigue pendiente el mismo paso de validación contra un escaneo real antes de considerar cualquiera de las otras dos opciones.
 
 ## Deliberadamente no tocado (fuera de alcance, no arreglado)
 
@@ -67,7 +76,7 @@ Pipeline, Swift/simd puro sin ARKit/RoomPlan (compila en el target de tests sin 
 - `PointCloudStore`: acumulación por vóxel sin consumidor (ver arriba) — decisión pendiente.
 - `videoFormat`/`planeDetection`/`isAutoFocusEnabled` de `ARSession`: sin tocar.
 - `FloorPlan.swift` (RoomPlan): sin tocar, sin refactor compartido con `PointCloudFloorPlanBuilder` (ver F4 arriba).
-- `ARWorldMap` persistido/compartido con RoomPlan (ver F3 arriba) — necesita decisión de producto primero.
+- `ARWorldMap` compartido con RoomPlan (ver F3 arriba) — sin API pública disponible, no es una decisión de producto pendiente sino una limitación de plataforma.
 
 ## F0: qué falta para tener línea base real
 
@@ -75,4 +84,12 @@ Instrumentación commiteada, medición pendiente: Instruments (Time Profiler + `
 
 ## Siguiente paso lógico
 
-Con F0, F1, F2 cerrados, F3 con E4/E6 resueltos (ARWorldMap pendiente de decisión de producto), y F4 con su núcleo algorítmico listo (pendiente de validación real y de la decisión de UI de arriba), lo que sigue es: (a) decidir el alcance real de la continuidad `ARWorldMap` por fase/proyecto, (b) empezar a validar F4 contra grabaciones reales, o (c) **F5** (estructura enterprise del código).
+Con F0, F1, F2 y F3 cerrados, y F4 conectado a la UI tras un flag de debug, lo único genuinamente pendiente de las fases F0-F4 es **validar en un iPhone real**: el pase completo de world map continuity (nombrar dos escaneos igual, confirmar el diálogo, confirmar que comparten marco de referencia) y el plano experimental de F4 contra un ambiente real amueblado. Ninguno de los dos se puede cerrar sin acceso físico al dispositivo.
+
+Mientras tanto, lo que sigue sin acceso a un iPhone es **F5** (estructura enterprise del código, ver nota abajo).
+
+## F5 — Estructura enterprise: evaluado, no iniciado (09/09/2026)
+
+El plan pide partir `ARPointCloudSession` (1129 líneas tras las fases anteriores, ~7 responsabilidades: lifecycle, procesamiento de malla, procesamiento de depth/frame, y el `ARSessionDelegate` completo) en archivos separados, además de convertir el núcleo puro de Capture3D en un Swift Package local, un protocolo `ScanSource` con implementación falsa, y concurrency checking estricto por fases.
+
+Se evaluó empezar por el paso más chico y seguro (separar `ARPointCloudSession` en extensiones por responsabilidad, en archivos distintos) pero se decidió **no hacerlo en esta sesión**: dividir en archivos distintos obliga a subir varias propiedades de `private` a `internal` para que las extensiones se vean entre sí, y esta clase es exactamente el código que corre en la cola del delegate de ARKit — el mecanismo raíz de la inestabilidad original (C4). Ya hubo un bug real esta misma sesión (`DelegateFrameMetrics`) que solo salió a la luz al compilar por primera vez; tocar esta clase en particular sin poder correr un escaneo real después para confirmar que sigue estable es un riesgo que no vale la pena tomar a ciegas. F5 sigue completamente sin empezar — el análisis de por dónde partirla queda hecho, no el código.
