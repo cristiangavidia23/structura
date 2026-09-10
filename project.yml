@@ -62,6 +62,8 @@ targets:
       - path: Structura/Capture3D/VoxelAccumulator.swift
       - path: Structura/Capture3D/DelegateFrameMetrics.swift
       - path: Structura/Capture3D/AngularVelocityGate.swift
+      - path: Structura/Capture3D/ARSessionStartupPolicy.swift
+      - path: Structura/Capture3D/ScanDriftBudget.swift
       - path: Structura/Export/PointCloud/PointCloudMeshClassification.swift
       - path: Structura/Export/PointCloud/PointCloudExportModels.swift
       - path: Structura/Export/PointCloud/ScanMetadataReport.swift

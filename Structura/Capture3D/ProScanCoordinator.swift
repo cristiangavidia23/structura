@@ -51,14 +51,6 @@ final class ProScanCoordinator: ObservableObject {
     /// fabricating a precision this coordinator doesn't actually have.
     private(set) var trackingDegradedTickCount: Int = 0
 
-    /// Pro Scan has no loop closure or relocalization — ARKit's estimated
-    /// position just keeps drifting the longer and further a pass runs,
-    /// which visibly warps the captured geometry. There's no code fix for
-    /// that within a single short ARKit session, so the practical mitigation
-    /// is keeping passes short: nudge the user once a scan runs long enough
-    /// that drift is likely to be noticeable.
-    static let recommendedMaxDuration = 40
-
     let performanceMonitor = PerformanceMonitor()
 
     // `nonisolated(unsafe)`, mirroring `arSession` below: `PointCloudStore`
@@ -140,6 +132,14 @@ final class ProScanCoordinator: ObservableObject {
                 self?.performanceMonitor.reportARKitFrame(snapshot)
             }
         }
+        // Fase 3 of the architecture audit, finding E4: fires at most once
+        // per pass — see `ScanDriftBudget`'s doc comment for why this
+        // replaces the previous flat elapsed-time nudge.
+        arSession.onDriftBudgetExceeded = { [weak self] in
+            Task { @MainActor in
+                self?.handleDriftBudgetExceeded()
+            }
+        }
     }
 
     func start(viewportSize: CGSize, interfaceOrientation: UIInterfaceOrientation) {
@@ -210,10 +210,16 @@ final class ProScanCoordinator: ObservableObject {
         if wasTrackingDegraded {
             trackingDegradedTickCount += 1
         }
-        if elapsedSeconds == Self.recommendedMaxDuration && !isRunningLong {
-            isRunningLong = true
-            haptics.trackingLostProgressive()
-        }
+    }
+
+    /// Fase 3 of the architecture audit, finding E4: `isRunningLong` (and
+    /// the haptic) mean exactly what they did before this phase — only the
+    /// trigger condition changed, from a flat elapsed-time cutoff to
+    /// `ARPointCloudSession`'s movement-based drift budget.
+    private func handleDriftBudgetExceeded() {
+        guard !isRunningLong else { return }
+        isRunningLong = true
+        haptics.trackingLostProgressive()
     }
 
     func confirmMeshClosed() {

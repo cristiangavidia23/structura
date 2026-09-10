@@ -201,6 +201,25 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
     private var angularVelocityGate = AngularVelocityGate()
     private var isCurrentFrameMotionAcceptable = true
 
+    /// Fase 3 of the architecture audit, finding E4 — see `ScanDriftBudget`'s
+    /// doc comment for why this replaces a flat elapsed-time cutoff.
+    /// Updated on every `didUpdate frame:` call, off the main actor, same
+    /// cost class as `angularVelocityGate`'s own per-frame update.
+    private var driftBudget = ScanDriftBudget()
+    private var hasNotifiedDriftBudgetExceeded = false
+    /// Fires once (edge-triggered, like `onCoordinateFrameBrokenStateChanged`)
+    /// the first time `driftBudget.isExhausted` becomes true for this pass.
+    var onDriftBudgetExceeded: (() -> Void)?
+
+    /// Fase 3, finding E6 — see `ARSessionStartupPolicy`. `startupAttemptCount`
+    /// and `lastRunAttemptTimestamp` track the in-flight startup retry state
+    /// machine; `isActive` guards a still-scheduled retry from calling
+    /// `session.run()` again after the user has already backed out via
+    /// `stop()`.
+    private var startupAttemptCount = 0
+    private var lastRunAttemptTimestamp: TimeInterval = 0
+    private var isActive = false
+
     /// The fused, deduplicated point set to export or visualize.
     ///
     /// - Parameter authoritative: when `false` (the default, and what the
@@ -269,45 +288,56 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
             return
         }
 
-        // RoomPlan's own ARSession may still be releasing the camera at the
-        // exact moment this second pass starts (its `stop()` call is not
-        // guaranteed to have finished tearing down hardware synchronously).
-        // A short grace period avoids racing that teardown.
         resetPipelineState()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-            guard let self else { return }
-            let configuration = ARWorldTrackingConfiguration()
-            configuration.sceneReconstruction = .meshWithClassification
+        isActive = true
+        // Fase 3 of the architecture audit, finding E6: no fixed grace
+        // period before the first attempt — see `ARSessionStartupPolicy`'s
+        // doc comment for why reacting to what ARKit actually reports
+        // (`didFailWithError`, handled below) is the right replacement for
+        // guessing how long RoomPlan's teardown takes.
+        attemptStart()
+    }
 
-            // Explicit rather than relying on ARKit's own default (which is
-            // already `.gravity`): engineering measurements need the Y axis
-            // plumb, never tied to wherever the camera happened to be
-            // pointed when tracking started (`.camera` alignment).
-            configuration.worldAlignment = .gravity
+    /// One attempt to start the underlying `ARSession` — called from
+    /// `start()` for the first attempt, and again by `didFailWithError`'s
+    /// retry branch below for every subsequent one. Builds a fresh
+    /// `ARWorldTrackingConfiguration` each time rather than caching one:
+    /// cheap, and simpler than reasoning about whether a cached
+    /// configuration object could be mutated or reused unsafely across
+    /// attempts.
+    private func attemptStart() {
+        startupAttemptCount += 1
+        lastRunAttemptTimestamp = CACurrentMediaTime()
 
-            // Request both the raw and temporally-smoothed depth semantics.
-            // `processFrame` prefers `smoothedSceneDepth`, falling back to
-            // `sceneDepth` (e.g. on the first few frames, before the
-            // temporal filter has enough history) — that fallback only
-            // means anything if both semantics are actually requested here.
-            // Previously only `.sceneDepth` was requested, so
-            // `smoothedSceneDepth` was always nil and the fallback did
-            // nothing on every single frame.
-            if ARWorldTrackingConfiguration.supportsFrameSemantics(.smoothedSceneDepth) {
-                configuration.frameSemantics.insert(.smoothedSceneDepth)
-            }
-            if ARWorldTrackingConfiguration.supportsFrameSemantics(.sceneDepth) {
-                configuration.frameSemantics.insert(.sceneDepth)
-            }
+        let configuration = ARWorldTrackingConfiguration()
+        configuration.sceneReconstruction = .meshWithClassification
 
-            // A fresh pass: reset tracking and drop any anchors that might
-            // otherwise carry over, rather than implicitly inheriting
-            // RoomPlan's just-torn-down session state.
-            self.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
+        // Explicit rather than relying on ARKit's own default (which is
+        // already `.gravity`): engineering measurements need the Y axis
+        // plumb, never tied to wherever the camera happened to be pointed
+        // when tracking started (`.camera` alignment).
+        configuration.worldAlignment = .gravity
+
+        // Request both the raw and temporally-smoothed depth semantics.
+        // `processFrame` prefers `smoothedSceneDepth`, falling back to
+        // `sceneDepth` (e.g. on the first few frames, before the temporal
+        // filter has enough history) — that fallback only means anything
+        // if both semantics are actually requested here.
+        if ARWorldTrackingConfiguration.supportsFrameSemantics(.smoothedSceneDepth) {
+            configuration.frameSemantics.insert(.smoothedSceneDepth)
         }
+        if ARWorldTrackingConfiguration.supportsFrameSemantics(.sceneDepth) {
+            configuration.frameSemantics.insert(.sceneDepth)
+        }
+
+        // A fresh pass: reset tracking and drop any anchors that might
+        // otherwise carry over, rather than implicitly inheriting
+        // RoomPlan's just-torn-down session state.
+        session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
     }
 
     func stop() {
+        isActive = false
         session.pause()
     }
 
@@ -338,6 +368,9 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
         lastMetricsPublishAt = 0
         angularVelocityGate.reset()
         isCurrentFrameMotionAcceptable = true
+        driftBudget.reset()
+        hasNotifiedDriftBudgetExceeded = false
+        startupAttemptCount = 0
     }
 
     /// A frame's color image and camera parameters, copied out of a live
@@ -878,6 +911,15 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
 extension ARPointCloudSession: ARSessionDelegate {
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
         recordDelegateFrameMetrics(for: frame)
+        // Fase 3, finding E4 — unconditional, same reasoning as
+        // `angularVelocityGate`'s update just below: both need every
+        // frame's transform, not just the ones the throttled pipelines
+        // below choose to process.
+        driftBudget.record(transform: frame.camera.transform)
+        if !hasNotifiedDriftBudgetExceeded, driftBudget.isExhausted {
+            hasNotifiedDriftBudgetExceeded = true
+            onDriftBudgetExceeded?()
+        }
         // Evaluated once per delivered frame, unconditionally — both
         // `processFrame` below and `updateMeshAnchors` (reacting to
         // `didAdd`/`didUpdate` anchors for this same frame) read the result
@@ -1038,8 +1080,26 @@ extension ARPointCloudSession: ARSessionDelegate {
         }
     }
 
+    /// Fase 3, finding E6: before surfacing this to the user, check whether
+    /// it's the transient single-active-session conflict
+    /// `ARSessionStartupPolicy` exists to retry — see that type's doc
+    /// comment. A failure long after a successful `run()` (the ordinary
+    /// "real" failure this delegate method existed to report before this
+    /// phase) falls outside the policy's early-failure window and is
+    /// surfaced exactly as before.
     func session(_ session: ARSession, didFailWithError error: Error) {
-        onFailure?(error.localizedDescription)
+        let secondsSinceRun = CACurrentMediaTime() - lastRunAttemptTimestamp
+        let decision = ARSessionStartupPolicy.decision(afterFailureAt: secondsSinceRun, attempt: startupAttemptCount)
+        switch decision {
+        case .retry(let afterSeconds):
+            guard isActive else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + afterSeconds) { [weak self] in
+                guard let self, self.isActive else { return }
+                self.attemptStart()
+            }
+        case .giveUp:
+            onFailure?(error.localizedDescription)
+        }
     }
 
     func sessionWasInterrupted(_ session: ARSession) {
@@ -1051,6 +1111,10 @@ extension ARPointCloudSession: ARSessionDelegate {
         isCoordinateFrameBroken = true
         relocalizationConfirmation.reset()
         onCoordinateFrameBrokenStateChanged?(true)
+        // Fase 3, finding E4 — see `ScanDriftBudget.discardPreviousTransform`'s
+        // doc comment for why the *comparison baseline* (not the
+        // accumulated counters) must be dropped across an interruption.
+        driftBudget.discardPreviousTransform()
     }
 
     func sessionInterruptionEnded(_ session: ARSession) {
