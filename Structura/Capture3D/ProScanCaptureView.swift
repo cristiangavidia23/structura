@@ -1,3 +1,4 @@
+import ARKit
 import SwiftUI
 import UIKit
 
@@ -17,6 +18,8 @@ struct ProScanCaptureView: View {
     @State private var exportError: String?
     @State private var isConfirmingCancel = false
     @State private var autosaveTask: Task<Void, Never>?
+    @State private var isOfferingWorldMapContinuation = false
+    @State private var didStartCapture = false
 
     var body: some View {
         Group {
@@ -64,14 +67,18 @@ struct ProScanCaptureView: View {
                     }
                 }
                 .onAppear {
-                    let scene = UIApplication.shared.connectedScenes
-                        .compactMap { $0 as? UIWindowScene }
-                        .first
-                    proScan.start(
-                        viewportSize: UIScreen.main.bounds.size,
-                        interfaceOrientation: scene?.interfaceOrientation ?? .portrait
-                    )
-                    startAutosaveLoop()
+                    // Fase 3, ARWorldMap continuity: a scan name previously
+                    // saved a world map (`WorldMapStore`, keyed by name since
+                    // `ScanRecord` has no project/phase field) offers the
+                    // user the choice to continue in that coordinate frame
+                    // before this pass's own `ARSession` even starts —
+                    // Cristian's decision on how to identify "the same
+                    // phase" without a real project model yet.
+                    if WorldMapStore.hasSavedWorldMap(forScanName: record.name) {
+                        isOfferingWorldMapContinuation = true
+                    } else {
+                        beginCapture(initialWorldMap: nil)
+                    }
                 }
                 .onDisappear {
                     autosaveTask?.cancel()
@@ -99,6 +106,26 @@ struct ProScanCaptureView: View {
                     Button("Cerrar", role: .cancel) {}
                 } message: {
                     Text(proScan.stopReason?.message ?? "")
+                }
+                .confirmationDialog(
+                    "Se encontró un escaneo anterior llamado \"\(record.name)\"",
+                    isPresented: $isOfferingWorldMapContinuation,
+                    titleVisibility: .visible
+                ) {
+                    Button("Continuar ese escaneo") {
+                        let name = record.name
+                        Task {
+                            let worldMap = await Task.detached(priority: .userInitiated) {
+                                WorldMapStore.load(forScanName: name)
+                            }.value
+                            beginCapture(initialWorldMap: worldMap)
+                        }
+                    }
+                    Button("Empezar de cero") {
+                        beginCapture(initialWorldMap: nil)
+                    }
+                } message: {
+                    Text("Puedes continuar en el mismo marco de referencia que ese pase anterior, o empezar este pase desde cero.")
                 }
                 .confirmationDialog(
                     "¿Cancelar este escaneo?",
@@ -201,10 +228,40 @@ struct ProScanCaptureView: View {
         .padding()
     }
 
+    private func beginCapture(initialWorldMap: ARWorldMap?) {
+        guard !didStartCapture else { return }
+        didStartCapture = true
+        let scene = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first
+        proScan.start(
+            viewportSize: UIScreen.main.bounds.size,
+            interfaceOrientation: scene?.interfaceOrientation ?? .portrait,
+            initialWorldMap: initialWorldMap
+        )
+        startAutosaveLoop()
+    }
+
     private func finish() {
-        proScan.stop()
         isExporting = true
 
+        // World map capture must happen before `proScan.stop()` pauses the
+        // session (`ARSession.getCurrentWorldMap` needs it running) — a
+        // best-effort save under this scan's name so a later Pro Scan pass
+        // over the same name can offer to continue from here.
+        let scanName = record.name
+        proScan.captureWorldMapForPersistence { worldMap in
+            if let worldMap {
+                WorldMapStore.save(worldMap, forScanName: scanName)
+            }
+            Task { @MainActor in
+                proScan.stop()
+                exportCapturedPoints()
+            }
+        }
+    }
+
+    private func exportCapturedPoints() {
         let directory = store.scansDirectory
         let baseName = "\(record.id.uuidString)_pointcloud"
 

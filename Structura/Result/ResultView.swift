@@ -19,14 +19,24 @@ struct ResultView: View {
         case dollhouse = "3D"
         case plan = "Plano"
         case heatmap = "Color real"
+        #if DEBUG
+        case experimentalPlan = "Plano (exp.)"
+        #endif
     }
 
     /// Heatmap only shows up once a Pro Scan pass actually produced a point
-    /// cloud for this scan — nothing to view otherwise.
+    /// cloud for this scan — nothing to view otherwise. The experimental
+    /// plan (F4 of the architecture audit) rides the same PLY, but is
+    /// compiled only into `#if DEBUG` builds — see
+    /// `PointCloudFloorPlanDebugView`'s doc comment for why it's not offered
+    /// to real users yet.
     private var availableModes: [Mode] {
         var modes: [Mode] = [.dollhouse, .plan]
         if store.plyURL(for: currentScan) != nil {
             modes.append(.heatmap)
+            #if DEBUG
+            modes.append(.experimentalPlan)
+            #endif
         }
         return modes
     }
@@ -55,7 +65,7 @@ struct ResultView: View {
                 content
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                if let plan, !plan.walls.isEmpty, mode != .heatmap {
+                if let plan, !plan.walls.isEmpty, mode == .dollhouse || mode == .plan {
                     VStack(spacing: 0) {
                         if mode == .plan, let caveat = caveat(for: plan) {
                             Text(caveat)
@@ -204,8 +214,27 @@ struct ResultView: View {
         isPresentingShare = true
     }
 
+    // `#if DEBUG` can't split an `if`/`else if` chain inside a `@ViewBuilder`
+    // (the parser rejects an `else` reintroduced after an `#endif`) — this
+    // branches out to its own top-level `if` instead, falling through to
+    // `nonExperimentalContent` for every other case.
     @ViewBuilder
     private var content: some View {
+        #if DEBUG
+        if mode == .experimentalPlan, let plyURL = store.plyURL(for: currentScan) {
+            PointCloudFloorPlanDebugView(plyURL: plyURL)
+                .transition(.opacity.combined(with: .scale(scale: 0.97)))
+                .id(mode)
+        } else {
+            nonExperimentalContent
+        }
+        #else
+        nonExperimentalContent
+        #endif
+    }
+
+    @ViewBuilder
+    private var nonExperimentalContent: some View {
         if mode == .heatmap, let plyURL = store.plyURL(for: currentScan) {
             HeatmapTabView(plyURL: plyURL, quality: currentScan.pointCloudQuality, unitSystem: unitSystem)
                 .transition(.opacity.combined(with: .scale(scale: 0.97)))
@@ -222,6 +251,14 @@ struct ResultView: View {
                         .transition(.opacity.combined(with: .scale(scale: 1.03)))
                 case .heatmap:
                     EmptyView()
+                #if DEBUG
+                case .experimentalPlan:
+                    // Unreachable: `content` routes `.experimentalPlan` to
+                    // `PointCloudFloorPlanDebugView` before ever reaching
+                    // this fallback. Only here so the switch stays
+                    // exhaustive against `Mode`'s full DEBUG case set.
+                    EmptyView()
+                #endif
                 }
             }
             .id(mode)

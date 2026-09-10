@@ -69,6 +69,13 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
     private var viewportSize = CGSize(width: 390, height: 844)
     private var interfaceOrientation: UIInterfaceOrientation = .portrait
 
+    /// Set once by `start(viewportSize:interfaceOrientation:initialWorldMap:)`
+    /// and read again by every retry `attemptStart()` performs (Fase 3,
+    /// finding E6's backoff) — a world map to continue in, rather than
+    /// resetting to a fresh coordinate origin, when a caller has one from a
+    /// previous Pro Scan pass over the same named scan (`WorldMapStore`).
+    private var initialWorldMap: ARWorldMap?
+
     var onFrame: ((PointCloudFrame) -> Void)?
     var onTrackingState: ((ARCamera.TrackingState) -> Void)?
     var onFailure: ((String) -> Void)?
@@ -280,9 +287,10 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
         session.delegate = self
     }
 
-    func start(viewportSize: CGSize, interfaceOrientation: UIInterfaceOrientation) {
+    func start(viewportSize: CGSize, interfaceOrientation: UIInterfaceOrientation, initialWorldMap: ARWorldMap? = nil) {
         self.viewportSize = viewportSize
         self.interfaceOrientation = interfaceOrientation
+        self.initialWorldMap = initialWorldMap
         guard Self.isSupported else {
             onFailure?("Este dispositivo no soporta Pro Scan.")
             return
@@ -330,15 +338,37 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
             configuration.frameSemantics.insert(.sceneDepth)
         }
 
-        // A fresh pass: reset tracking and drop any anchors that might
-        // otherwise carry over, rather than implicitly inheriting
-        // RoomPlan's just-torn-down session state.
-        session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
+        // `.resetTracking` and `initialWorldMap` are mutually exclusive in
+        // effect — resetting tracking discards the very coordinate frame
+        // the world map exists to continue. Without one, this is a fresh
+        // pass: reset tracking and drop any anchors that might otherwise
+        // carry over, rather than implicitly inheriting RoomPlan's
+        // just-torn-down session state (unchanged from before this world
+        // map continuity was added).
+        if let initialWorldMap {
+            configuration.initialWorldMap = initialWorldMap
+            session.run(configuration, options: [.removeExistingAnchors])
+        } else {
+            session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
+        }
     }
 
     func stop() {
         isActive = false
         session.pause()
+    }
+
+    /// Reads back the session's current world map for persistence
+    /// (`WorldMapStore`) — must be called *before* `stop()` pauses the
+    /// session; `ARSession.getCurrentWorldMap` requires an active session
+    /// and its completion runs on an arbitrary queue, not necessarily the
+    /// caller's. `nil` on any failure (no tracking yet, or ARKit couldn't
+    /// produce one) — a best-effort capture, not something a Pro Scan
+    /// finish should ever block or fail on.
+    func currentWorldMap(_ completion: @escaping (ARWorldMap?) -> Void) {
+        session.getCurrentWorldMap { worldMap, _ in
+            completion(worldMap)
+        }
     }
 
     /// Called synchronously from `start()`, on whatever thread called it

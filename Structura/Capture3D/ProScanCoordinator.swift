@@ -142,7 +142,7 @@ final class ProScanCoordinator: ObservableObject {
         }
     }
 
-    func start(viewportSize: CGSize, interfaceOrientation: UIInterfaceOrientation) {
+    func start(viewportSize: CGSize, interfaceOrientation: UIInterfaceOrientation, initialWorldMap: ARWorldMap? = nil) {
         guard Self.isSupported, !isRunning else { return }
         pointCloudStore.reset()
         performanceMonitor.start()
@@ -150,7 +150,7 @@ final class ProScanCoordinator: ObservableObject {
         // Needed for `UIDevice.current.batteryLevel`/`.batteryState` to
         // report real values at all — without this they're always -1/`.unknown`.
         UIDevice.current.isBatteryMonitoringEnabled = true
-        arSession.start(viewportSize: viewportSize, interfaceOrientation: interfaceOrientation)
+        arSession.start(viewportSize: viewportSize, interfaceOrientation: interfaceOrientation, initialWorldMap: initialWorldMap)
         isRunning = true
         elapsedSeconds = 0
         isRunningLong = false
@@ -191,6 +191,19 @@ final class ProScanCoordinator: ObservableObject {
         }
         RunLoop.main.add(timer, forMode: .common)
         meshCountTimer = timer
+    }
+
+    /// Best-effort capture of the session's current world map for
+    /// `WorldMapStore`, for a future Pro Scan pass over the same named scan
+    /// to continue from. Must be called before `stop()` — see
+    /// `ARPointCloudSession.currentWorldMap(_:)`'s doc comment. The
+    /// completion is not guaranteed to run on the main actor.
+    func captureWorldMapForPersistence(_ completion: @escaping (ARWorldMap?) -> Void) {
+        guard isRunning else {
+            completion(nil)
+            return
+        }
+        arSession.currentWorldMap(completion)
     }
 
     func stop() {
