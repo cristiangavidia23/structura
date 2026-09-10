@@ -189,9 +189,28 @@ private enum SceneBuilder {
 
         let node = SCNNode(geometry: pointCloudGeometry(for: visiblePoints))
         scene.rootNode.addChildNode(node)
+
         scene.rootNode.addChildNode(cameraNode(framing: node))
         return scene
     }
+
+    // Tried and reverted (probado en dispositivo, 09/09/2026): lighting these
+    // points by their exported normals (`.lambert` + an ambient fill and a
+    // camera-mounted directional light), plus distance fog as a depth cue.
+    // Both made the cloud visibly *worse* on a real scan and were backed out:
+    //
+    // - `.lambert` on `.point` primitives did not shade the sprites while
+    //   keeping their per-vertex color the way it does for triangles — it
+    //   washed the captured colors out to near-black instead. The real fix
+    //   for shading a point cloud is screen-space (eye-dome lighting in a
+    //   Metal pass), not a SceneKit lighting model.
+    // - The fog range was simply wrong: `cameraNode(framing:)` starts the
+    //   camera at ~3.4x the cloud's bounding radius, so a fog range ending at
+    //   3.4x that radius put half the cloud in full fog before the user
+    //   touched anything.
+    //
+    // Left as a note rather than deleted so the next attempt starts from what
+    // was already measured, instead of re-deriving it.
 
     private static func pointCloudGeometry(for points: [PointCloudExportPoint]) -> SCNGeometry {
         var vertices: [SCNVector3] = []
@@ -225,12 +244,32 @@ private enum SceneBuilder {
             primitiveCount: points.count,
             bytesPerIndex: MemoryLayout<UInt32>.size
         )
-        element.pointSize = 6
-        element.minimumPointScreenSpaceRadius = 2
-        element.maximumPointScreenSpaceRadius = 8
+        // `pointSize` is in **world units**, not pixels — the two
+        // `...ScreenSpaceRadius` values are the pixel clamps applied to
+        // whatever that world size projects to. The previous `6` therefore
+        // asked for 6-metre points, which every camera distance clamped to
+        // the 8 px ceiling: points rendered at a fixed 8 px at *every* zoom
+        // level, so zooming in spread them apart on screen without growing
+        // them, opening black gaps between what is really a continuous
+        // surface.
+        //
+        // Sized to the fused cloud's actual spacing instead: fusion dedups to
+        // one point per `ProScanConfig.voxelSizeMeters` (2 cm) cell, so 2.6 cm
+        // points overlap their neighbours by ~30% and read as a surface when
+        // you zoom in, while still shrinking honestly as you pull away.
+        element.pointSize = CGFloat(ProScanConfig.voxelSizeMeters) * 1.3
+        // Floor: a point must stay visible when the whole scan is framed
+        // (where 2.6 cm projects to well under a pixel).
+        element.minimumPointScreenSpaceRadius = 1.5
+        // Ceiling: high enough not to bind at close zoom (that ceiling is the
+        // bug above), low enough that a single stray sample examined nose-to-
+        // surface can't smear across the view.
+        element.maximumPointScreenSpaceRadius = 24
 
         let geometry = SCNGeometry(sources: [vertexSource, colorSource], elements: [element])
         let material = SCNMaterial()
+        // `.constant` — see the reverted-lighting note in `build(from:)` for
+        // why the normals this cloud carries are *not* used to shade it.
         material.lightingModel = .constant
         material.isDoubleSided = true
         geometry.materials = [material]

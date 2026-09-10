@@ -14,6 +14,7 @@ struct ResultView: View {
     @State private var isRenaming = false
     @State private var renameText = ""
     @State private var isPresentingProScan = false
+    @Namespace private var modeSelection
 
     private enum Mode: String, CaseIterable {
         case dollhouse = "3D"
@@ -62,6 +63,8 @@ struct ResultView: View {
             GraphPaperBackground().ignoresSafeArea()
 
             VStack(spacing: 0) {
+                modeSelector
+
                 content
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -106,15 +109,6 @@ struct ResultView: View {
         .navigationTitle(currentScan.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                Picker("Vista", selection: $mode) {
-                    ForEach(availableModes, id: \.self) { mode in
-                        Text(mode.rawValue).tag(mode)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .frame(width: availableModes.count > 2 ? 260 : 160)
-            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     renameText = currentScan.name
@@ -149,6 +143,58 @@ struct ResultView: View {
                 store.rename(currentScan, to: renameText)
             }
         }
+    }
+
+    /// The view switcher, as its own full-width bar under the navigation bar
+    /// rather than a segmented `Picker` in the toolbar's `.principal` slot.
+    /// Two reasons: that slot is where the scan's name belongs (the picker was
+    /// displacing it, so the name was never visible), and a fixed-width
+    /// segmented control silently truncates its labels once a fourth mode
+    /// exists ("Color real" → "Color…"). Dividing the full width by the number
+    /// of modes scales to however many there are.
+    private var modeSelector: some View {
+        HStack(spacing: 0) {
+            ForEach(availableModes, id: \.self) { candidate in
+                let isSelected = candidate == mode
+                Button {
+                    mode = candidate
+                } label: {
+                    VStack(spacing: 0) {
+                        Text(candidate.rawValue)
+                            .font(.footnote.weight(isSelected ? .semibold : .regular))
+                            .foregroundStyle(isSelected ? Theme.ink : Theme.ink.opacity(0.45))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 11)
+
+                        // Slides between tabs rather than cross-fading in
+                        // place, so the selected mode stays traceable when
+                        // the content below is also animating.
+                        if isSelected {
+                            Capsule()
+                                .fill(Theme.accent)
+                                .frame(height: 2)
+                                .matchedGeometryEffect(id: "selectedMode", in: modeSelection)
+                        } else {
+                            Color.clear.frame(height: 2)
+                        }
+                    }
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+            }
+        }
+        .padding(.horizontal, 12)
+        .background(alignment: .bottom) {
+            Rectangle()
+                .fill(Theme.ink.opacity(0.12))
+                .frame(height: 1)
+        }
+        // Overrides the slower content transition the whole body carries: a
+        // tab underline that takes 0.85 s to travel reads as lag, not polish.
+        .animation(.snappy(duration: 0.28), value: mode)
     }
 
     private func exportMenu(for plan: FloorPlan) -> some View {
