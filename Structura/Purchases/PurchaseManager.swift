@@ -28,11 +28,13 @@ final class PurchaseManager: NSObject, ObservableObject {
     /// touching the RevenueCat wiring itself, so flipping this back to
     /// `false` restores the real paywall exactly as it was.
     ///
-    /// Set back to `false` on 2026-09-10, ahead of the first TestFlight
-    /// build — the `verify_release_readiness` lane in `fastlane/Fastfile`
-    /// now fails the build if this is ever `true` again, so this can't ship
-    /// by accident a second time.
-    static let isPaywallDisabledForTesting = false
+    /// Re-enabled 2026-09-10 at Cristian's request, to test premium-gated
+    /// features on his own device while RevenueCat/sandbox purchases aren't
+    /// set up yet. **Set back to `false` before any TestFlight/App Store
+    /// build** — the `verify_release_readiness` lane in `fastlane/Fastfile`
+    /// enforces exactly that: `fastlane beta` fails outright while this is
+    /// `true`, so it can't reach a real distribution build by accident.
+    static let isPaywallDisabledForTesting = true
 
     @Published private(set) var isPremium = isPaywallDisabledForTesting
     @Published private(set) var offering: Offering?
