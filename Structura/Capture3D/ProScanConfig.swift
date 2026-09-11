@@ -95,9 +95,21 @@ enum ProScanConfig {
     /// bucket the same physical space. All three now forward to this
     /// function instead of keeping their own copy.
     static func voxelKey(for position: SIMD3<Float>) -> Int64 {
-        let x = Int64((position.x / voxelSizeMeters).rounded()) & 0x1FFFFF
-        let y = Int64((position.y / voxelSizeMeters).rounded()) & 0x1FFFFF
-        let z = Int64((position.z / voxelSizeMeters).rounded()) & 0x1FFFFF
+        voxelKey(for: position, cellSize: voxelSizeMeters)
+    }
+
+    /// The same packing at an arbitrary cell size, for the consumers that
+    /// need a *different* resolution rather than the fusion grid's — the
+    /// coverage estimator's coarse occupancy grid, and
+    /// `PointCloudDenoiser`'s neighbour-search grid, which is sized to its
+    /// search radius. Parameterized here rather than re-implemented at each
+    /// call site: finding E3 was precisely this packing being hand-copied,
+    /// where a change in one copy would silently desynchronize how different
+    /// parts of the pipeline bucket the same space.
+    static func voxelKey(for position: SIMD3<Float>, cellSize: Float) -> Int64 {
+        let x = Int64((position.x / cellSize).rounded()) & 0x1FFFFF
+        let y = Int64((position.y / cellSize).rounded()) & 0x1FFFFF
+        let z = Int64((position.z / cellSize).rounded()) & 0x1FFFFF
         return (x << 42) | (y << 21) | z
     }
 

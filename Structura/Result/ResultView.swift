@@ -407,6 +407,12 @@ private struct HeatmapTabView: View {
     @State private var showsReferenceGrid = false
     @State private var pointSizeMultiplier: Float = 1
     @State private var isShowingStatistics = false
+    /// Denoised copy of `points`, computed once off the main thread. Kept
+    /// alongside the raw cloud rather than replacing it, so the toggle below
+    /// can show what the filter actually changed instead of asking the user
+    /// to take it on faith.
+    @State private var denoised: PointCloudDenoiser.Result?
+    @State private var isDenoisingEnabled = true
 
     var body: some View {
         VStack(spacing: 0) {
@@ -414,7 +420,7 @@ private struct HeatmapTabView: View {
                 Group {
                     if let points, !points.isEmpty {
                         PointCloudSceneView(
-                            points: points,
+                            points: displayedPoints ?? points,
                             measurement: measurement,
                             statistics: statistics,
                             showsReferenceGrid: showsReferenceGrid,
@@ -469,6 +475,11 @@ private struct HeatmapTabView: View {
             statistics = await Task.detached(priority: .utility) {
                 PointCloudStatistics.make(of: loaded)
             }.value
+            // Neighbour search over a few hundred thousand points — never on
+            // the main actor, and computed once rather than on every toggle.
+            denoised = await Task.detached(priority: .utility) {
+                PointCloudDenoiser.denoise(loaded)
+            }.value
         }
         .alert("Calibrar con distancia conocida", isPresented: $isPresentingCalibrationInput) {
             TextField("Distancia real (m)", text: $calibrationReferenceText)
@@ -483,6 +494,13 @@ private struct HeatmapTabView: View {
         } message: {
             Text("Mide un objeto o distancia que ya conoces (por ejemplo, una puerta estándar o una cinta métrica) y escribe aquí su medida real en metros.")
         }
+    }
+
+    /// What the 3D view actually renders: the denoised cloud once it is
+    /// ready and the filter is on, the raw measurements otherwise.
+    private var displayedPoints: [PointCloudExportPoint]? {
+        guard isDenoisingEnabled, let denoised else { return points }
+        return denoised.points
     }
 
     /// Floating 3D-inspector controls: reference grid, point size, and the
@@ -512,6 +530,17 @@ private struct HeatmapTabView: View {
                 ) {
                     isShowingStatistics.toggle()
                 }
+
+                inspectorButton(
+                    systemImage: "wand.and.rays",
+                    isActive: isDenoisingEnabled,
+                    accessibilityLabel: "Reducción de ruido de superficie"
+                ) {
+                    isDenoisingEnabled.toggle()
+                }
+                // Nothing to toggle between until the filter has run.
+                .disabled(denoised == nil)
+                .opacity(denoised == nil ? 0.4 : 1)
                 // Nothing to show, so nothing to toggle.
                 .disabled(statistics == nil)
                 .opacity(statistics == nil ? 0.4 : 1)
@@ -585,6 +614,21 @@ private struct HeatmapTabView: View {
                 "Puntos con confianza real",
                 value: String(format: "%.0f%%", statistics.observedConfidenceFraction * 100)
             )
+            if let denoised {
+                // Stated plainly rather than applied silently: these points
+                // were moved onto a fitted surface, and anyone reading a
+                // measurement off them deserves to know how many.
+                Divider().overlay(Color.white.opacity(0.15)).padding(.vertical, 2)
+                statisticsRow(
+                    isDenoisingEnabled ? "Filtro de ruido" : "Filtro de ruido (apagado)",
+                    value: isDenoisingEnabled ? "activo" : "viendo crudo"
+                )
+                statisticsRow(
+                    "Aplanados sobre su plano",
+                    value: String(format: "%.0f%%", Float(denoised.flattenedCount) / Float(max(1, denoised.flattenedCount + denoised.untouchedCount + denoised.removedCount)) * 100)
+                )
+                statisticsRow("Sueltos descartados", value: denoised.removedCount.formatted(.number))
+            }
         }
         .font(.caption2)
         .padding(.horizontal, 12)
