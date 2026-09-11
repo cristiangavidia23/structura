@@ -347,14 +347,22 @@ final class VoxelAccumulatorTests: XCTestCase {
     // MARK: - Voxel hashing (shared packing scheme)
 
     func testVoxelKeyGroupsPositionsWithinTheSameCell() {
-        let a = SIMD3<Float>(1.001, 2.001, 3.001)
-        let b = SIMD3<Float>(1.005, 2.006, 3.004)
+        // Derived from the configured cell size rather than written as a
+        // literal: this asserts the *behaviour* (positions closer than a
+        // cell share a key), so it keeps testing that when the resolution
+        // changes instead of failing for having assumed 2 cm.
+        let cell = ProScanConfig.voxelSizeMeters
+        // A hair either side of one cell's centre, so both round to it.
+        let centre = SIMD3<Float>(1, 2, 3) * cell
+        let a = centre - SIMD3<Float>(repeating: cell * 0.2)
+        let b = centre + SIMD3<Float>(repeating: cell * 0.2)
         XCTAssertEqual(VoxelAccumulator.voxelKey(for: a), VoxelAccumulator.voxelKey(for: b))
     }
 
     func testVoxelKeyDistinguishesAdjacentCells() {
         let a = SIMD3<Float>(0, 0, 0)
-        let b = SIMD3<Float>(0.05, 0, 0)
+        // Comfortably more than one cell away, whatever the cell size is.
+        let b = SIMD3<Float>(ProScanConfig.voxelSizeMeters * 3, 0, 0)
         XCTAssertNotEqual(VoxelAccumulator.voxelKey(for: a), VoxelAccumulator.voxelKey(for: b))
     }
 }

@@ -218,8 +218,18 @@ final class VoxelAccumulator {
     /// across runs — `Dictionary` iteration order is not stable, and an
     /// export whose point order changes between two identical scans is
     /// needlessly hard to diff or regression-test.
-    func fusedSamples() -> [Sample] {
-        cells.keys.sorted().map { key in
+    /// `sorted` buys a deterministic point order, at the cost of sorting
+    /// every occupied voxel key — tens of milliseconds once the depth path
+    /// pushes this into the hundreds of thousands, while the caller holds
+    /// the lock the capture pipeline needs.
+    ///
+    /// Worth paying at the final export, where a stable order is what makes
+    /// two runs of the same scan diffable. Not worth paying on the autosave
+    /// timer, which overwrites the same crash-recovery file every few
+    /// seconds and whose point order nothing reads.
+    func fusedSamples(sorted: Bool = true) -> [Sample] {
+        let keys = sorted ? cells.keys.sorted() : Array(cells.keys)
+        return keys.map { key in
             let cell = cells[key]!
             let position = cell.weightedPositionSum / cell.weightSum
             let color = cell.weightedColorSum / cell.weightSum
@@ -266,34 +276,6 @@ final class VoxelAccumulator {
     /// nobody had an opinion — which is the honest answer for a point only
     /// the depth path ever saw.
     static let unclassifiedRawValue: UInt8 = .max
-
-    /// Fuses two already-fused sample sets into one.
-    ///
-    /// Exists because Pro Scan accumulates from two independent sources —
-    /// ARKit's scene mesh and the LiDAR depth map (see
-    /// `ARPointCloudSession`) — which observe overlapping space. Simply
-    /// concatenating them would emit two coincident points wherever both saw
-    /// the same voxel, inflating the point count with duplicates that no
-    /// downstream consumer could tell from real, distinct geometry.
-    ///
-    /// Re-recording through a fresh accumulator collapses those pairs into
-    /// one confidence-weighted point, and lets a classification observed by
-    /// only one source (the mesh path labels faces; the depth path cannot)
-    /// still win its voxel's vote.
-    ///
-    /// O(voxels in the two inputs), not O(samples ever observed): both
-    /// inputs already hold one entry per voxel.
-    static func merged(_ first: [Sample], _ second: [Sample]) -> [Sample] {
-        // Fusing a set with nothing would still round-trip every sample
-        // through a rebuild for no change; skip that.
-        if second.isEmpty { return first }
-        if first.isEmpty { return second }
-
-        let combined = VoxelAccumulator()
-        combined.record(contentsOf: first)
-        combined.record(contentsOf: second)
-        return combined.fusedSamples()
-    }
 
     /// Maps a raw classification byte to its tally lane, or `nil` for a
     /// value outside the eight ARKit defines — an unknown byte is not

@@ -32,61 +32,14 @@ final class DenseCloudFusionTests: XCTestCase {
 
     // MARK: - Fusión de las dos fuentes
 
-    func testMergingCollapsesPointsTheTwoSourcesBothObserved() {
-        // Same physical spot, seen by the mesh path and the depth path.
-        let mesh = [sample(1, 1, 1)]
-        let depth = [sample(1, 1, 1)]
-
-        let merged = VoxelAccumulator.merged(mesh, depth)
-
-        XCTAssertEqual(merged.count, 1, "A voxel both sources saw is one point, not two coincident ones.")
-    }
-
-    func testMergingKeepsGeometryOnlyOneSourceSaw() {
-        // The depth map reaches surfaces ARKit's mesh never reconstructed;
-        // that extra coverage is the whole point of ingesting it.
-        let mesh = [sample(0, 0, 0)]
-        let depth = [sample(0, 0, 0), sample(5, 0, 0), sample(0, 5, 0)]
-
-        let merged = VoxelAccumulator.merged(mesh, depth)
-
-        XCTAssertEqual(merged.count, 3)
-    }
-
-    func testMergingIsNotAffectedByArgumentOrder() {
-        let mesh = [sample(0, 0, 0, confidence: 1), sample(2, 0, 0, confidence: 0.6)]
-        let depth = [sample(0, 0, 0, confidence: 0.5), sample(9, 9, 9)]
-
-        let forward = VoxelAccumulator.merged(mesh, depth)
-        let backward = VoxelAccumulator.merged(depth, mesh)
-
-        XCTAssertEqual(forward.count, backward.count)
-        for (a, b) in zip(forward, backward) {
-            XCTAssertEqual(a.position.x, b.position.x, accuracy: 1e-5)
-            XCTAssertEqual(a.position.y, b.position.y, accuracy: 1e-5)
-            XCTAssertEqual(a.position.z, b.position.z, accuracy: 1e-5)
-            XCTAssertEqual(a.confidence, b.confidence, accuracy: 1e-5)
-        }
-    }
-
+ 
+ 
+ 
     /// The depth path cannot label points — ARKit classifies mesh faces, not
     /// depth pixels, so those samples carry `.none`. Where the mesh path did
     /// observe the same voxel, its real label has to survive the merge
     /// rather than be outvoted into "unclassified".
-    func testAMeshClassificationSurvivesMergingWithUnlabelledDepthPoints() {
-        let wallCode: UInt8 = 3
-        let mesh = [sample(1, 1, 1, classification: wallCode)]
-        let depth = [sample(1, 1, 1, classification: VoxelAccumulator.unclassifiedRawValue)]
-
-        let merged = VoxelAccumulator.merged(mesh, depth)
-
-        XCTAssertEqual(merged.count, 1)
-        XCTAssertEqual(
-            merged[0].classificationRawValue, wallCode,
-            "A real classification observed by one source must not be lost to an unlabelled duplicate."
-        )
-    }
-
+ 
     /// The production shape of the previous test: the depth path is far
     /// denser than the mesh path, so if its samples voted at all they would
     /// win by sheer count. This is the case that would have silently
@@ -119,38 +72,48 @@ final class DenseCloudFusionTests: XCTestCase {
         XCTAssertEqual(fused[0].classificationRawValue, 0, "The sentinel must never reach an exported point.")
     }
 
-    func testMergedConfidenceIsWeightedAcrossBothSources() {
-        let mesh = [sample(0, 0, 0, confidence: 1.0)]
-        let depth = [sample(0, 0, 0, confidence: 0.5)]
-
-        let merged = VoxelAccumulator.merged(mesh, depth)
-
-        XCTAssertEqual(merged.count, 1)
-        XCTAssertEqual(merged[0].confidence, 0.75, accuracy: 1e-5, "Two observations of one voxel average.")
-    }
-
+ 
     // MARK: - Casos degenerados
 
-    func testMergingWithAnEmptySideReturnsTheOtherUntouched() {
-        let points = [sample(1, 2, 3), sample(4, 5, 6)]
-
-        XCTAssertEqual(VoxelAccumulator.merged(points, []).count, 2)
-        XCTAssertEqual(VoxelAccumulator.merged([], points).count, 2)
-        XCTAssertTrue(VoxelAccumulator.merged([], []).isEmpty)
-    }
-
+ 
     /// A scan running before the mesh path has produced anything (or on a
     /// surface ARKit declines to reconstruct) must still export the depth
     /// cloud, not nothing.
-    func testDepthOnlyCloudSurvivesTheMerge() {
-        let depth = (0..<50).map { sample(Float($0) * 0.5, 0, 0) }
+ 
+    // MARK: - Adaptación térmica de la ingesta de profundidad
 
-        let merged = VoxelAccumulator.merged([], depth)
+    // MARK: - Orden de salida
 
-        XCTAssertEqual(merged.count, 50)
+    /// The autosave path skips sorting to keep `meshLock` short. Skipping it
+    /// must change only the order, never the contents — an autosaved file is
+    /// a real crash-recovery snapshot, not a lossy preview.
+    func testSkippingTheSortChangesOrderButNotContents() {
+        let accumulator = VoxelAccumulator()
+        for i in 0..<200 {
+            accumulator.record(sample(Float(i) * 0.05, Float(i % 7) * 0.05, Float(i % 3) * 0.05))
+        }
+
+        let sorted = accumulator.fusedSamples(sorted: true)
+        let unsorted = accumulator.fusedSamples(sorted: false)
+
+        XCTAssertEqual(sorted.count, unsorted.count)
+        func key(_ s: VoxelAccumulator.Sample) -> String {
+            String(format: "%.4f/%.4f/%.4f", s.position.x, s.position.y, s.position.z)
+        }
+        XCTAssertEqual(Set(sorted.map(key)), Set(unsorted.map(key)))
     }
 
-    // MARK: - Adaptación térmica de la ingesta de profundidad
+    func testSortedOutputIsStableAcrossCalls() {
+        let accumulator = VoxelAccumulator()
+        for i in 0..<100 {
+            accumulator.record(sample(Float(i) * 0.07, 0, Float(i % 5) * 0.03))
+        }
+
+        let first = accumulator.fusedSamples(sorted: true).map(\.position.x)
+        let second = accumulator.fusedSamples(sorted: true).map(\.position.x)
+
+        XCTAssertEqual(first, second, "A deterministic order is the whole reason the export pays for the sort.")
+    }
 
     func testDepthStrideWidensUnderThermalPressureAndNeverNarrows() {
         let nominal = ProScanConfig.depthPixelStride(forThermalState: .nominal)

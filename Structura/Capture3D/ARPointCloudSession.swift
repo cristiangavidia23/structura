@@ -153,24 +153,6 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
     /// ones (see `VoxelAccumulator.remove(_:)`).
     private let fusedAccumulator = VoxelAccumulator()
 
-    /// The dense half of the cloud: depth-map samples, fused by voxel.
-    ///
-    /// Separate from `fusedAccumulator` rather than sharing it, because the
-    /// two have opposite retraction semantics. A mesh anchor is
-    /// re-triangulated over and over, so its contribution must be
-    /// *withdrawable* — which is why `meshPointsByAnchor` retains every raw
-    /// mesh sample, and why the final export rebuilds from those to shed
-    /// accumulated floating-point residue. A depth sample is a one-time
-    /// observation that is never revised or removed, so nothing here ever
-    /// needs withdrawing and no raw retention is required: each sample is
-    /// folded into its voxel and dropped.
-    ///
-    /// That distinction is what makes this affordable. The depth stream is
-    /// two orders of magnitude denser than the mesh — retaining raw samples
-    /// the way the mesh path does would cost hundreds of megabytes on a long
-    /// scan, while this stays bounded by *occupied voxels*
-    /// (`ProScanConfig.maximumDepthVoxelCount`).
-    private let depthAccumulator = VoxelAccumulator()
 
     /// Raw (pre-fusion) count of depth samples folded in, for the live HUD
     /// only — the same "progress proxy, not the export count" role
@@ -257,56 +239,51 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
 
     /// The fused, deduplicated point set to export or visualize.
     ///
-    /// - Parameter authoritative: when `false` (the default, and what the
-    ///   autosave path uses), reads the incrementally-maintained
-    ///   accumulator — O(voxels), no rebuild. When `true`, rebuilds from
-    ///   every stored sample first, which costs O(points) but carries no
-    ///   floating-point residue from a capture's worth of record/remove
-    ///   cycles. Pay that once, at the final export; never on a timer.
+    /// - Parameter authoritative: whether the result is returned in a
+    ///   deterministic order. `true` at the final export, where a stable
+    ///   point order is what makes two runs of the same scan diffable;
+    ///   `false` (the default) on the autosave timer, which overwrites the
+    ///   same crash-recovery file every few seconds and whose order nothing
+    ///   reads — worth skipping, since sorting every occupied voxel key runs
+    ///   into tens of milliseconds with `meshLock` held.
+    ///
+    ///   This parameter used to select a full rebuild from every stored
+    ///   sample; see the note in the body for why that is gone.
     func currentMeshPoints(authoritative: Bool = false) -> [PointCloudExportPoint] {
         // Two distinct signpost names, not one with a dynamic argument, so
-        // Instruments' timeline trivially separates the cheap O(voxels)
-        // incremental read (the autosave path, Fase 1) from the expensive
-        // O(points) authoritative rebuild (final export only) without
-        // needing to inspect each interval's payload.
+        // Instruments' timeline trivially separates the two read shapes
+        // without needing to inspect each interval's payload.
         let signpostName: StaticString = authoritative ? "currentMeshPoints.authoritative" : "currentMeshPoints.incremental"
         let signpostID = Self.signposter.makeSignpostID()
         let signpostState = Self.signposter.beginInterval(signpostName, id: signpostID)
         defer { Self.signposter.endInterval(signpostName, signpostState) }
 
+        // One accumulator now holds both sources — ARKit's scene mesh and
+        // the LiDAR depth map — so reading the cloud is a single pass with
+        // nothing to merge.
+        //
+        // It used to be two, fused on every read. That cost three O(voxels)
+        // passes (sort, re-record, sort again) *per autosave*, most of it
+        // with `meshLock` held against a depth pipeline trying to ingest
+        // twelve times a second — a visible stutter every autosave tick,
+        // growing with the scan.
+        //
+        // The authoritative rebuild that used to run here is gone with it,
+        // and deliberately so. It rebuilt from `meshPointsByAnchor` to shed
+        // the floating-point residue of repeated record/withdraw cycles —
+        // but those raw samples only ever existed for the *mesh* path.
+        // Depth samples are folded into their voxel and dropped (retaining
+        // them raw would cost hundreds of megabytes), so a rebuild from that
+        // store can no longer see the dense majority of the cloud: it would
+        // quietly export far less than the app displays. Silently shipping a
+        // sparser file than the user was shown is a much worse failure than
+        // float residue in the last decimal of a weighted average.
+        //
+        // `authoritative` now selects a deterministic point order instead —
+        // see `VoxelAccumulator.fusedSamples(sorted:)`.
         meshLock.lock()
-        // Two sources, fused into one cloud:
-        //
-        //  - the mesh path (ARKit's scene reconstruction), which carries
-        //    real per-face classifications but is a low-resolution surface;
-        //  - the depth path (the LiDAR depth map), which is one to two
-        //    orders of magnitude denser and is what makes the cloud read as
-        //    a surface rather than as scattered dust.
-        //
-        // They are combined through a third accumulator rather than simply
-        // concatenated: wherever both observed the same voxel, concatenating
-        // would emit two coincident points instead of one, inflating the
-        // count with duplicates. Re-fusing collapses those into a single
-        // confidence-weighted point, and lets the mesh path's classification
-        // vote carry into a voxel the depth path could not label.
-        //
-        // This pass is O(occupied voxels), not O(samples ever observed) —
-        // both inputs are already one entry per voxel.
-        let meshFused: [VoxelAccumulator.Sample]
-        if authoritative {
-            // See this method's note on the authoritative path: rebuilding
-            // sheds the floating-point residue that repeated
-            // record/withdraw cycles leave in the incremental accumulator.
-            // Only the mesh path accumulates that residue — depth samples
-            // are never withdrawn — so only it needs rebuilding.
-            meshFused = VoxelAccumulator.rebuilt(from: meshPointsByAnchor.values.joined()).fusedSamples()
-        } else {
-            meshFused = fusedAccumulator.fusedSamples()
-        }
-        let depthFused = depthAccumulator.fusedSamples()
+        let fused = fusedAccumulator.fusedSamples(sorted: authoritative)
         meshLock.unlock()
-
-        let fused = VoxelAccumulator.merged(meshFused, depthFused)
 
         return fused.map { sample in
             PointCloudExportPoint(
@@ -444,7 +421,6 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
         meshPointsByAnchor.removeAll(keepingCapacity: false)
         fusedAccumulator.reset()
         meshPointCountTotal = 0
-        depthAccumulator.reset()
         depthSampleCountTotal = 0
         meshLock.unlock()
         confidenceGrid.reset()
@@ -1080,9 +1056,9 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
             // `ProScanConfig.maximumDepthVoxelCount`. Like every other budget
             // in this pipeline, hitting it stops further ingestion and keeps
             // everything already captured.
-            guard self.depthAccumulator.observedVoxelCount < ProScanConfig.maximumDepthVoxelCount else { return }
+            guard self.fusedAccumulator.observedVoxelCount < ProScanConfig.maximumDepthVoxelCount else { return }
 
-            self.depthAccumulator.record(contentsOf: samples)
+            self.fusedAccumulator.record(contentsOf: samples)
             self.depthSampleCountTotal += samples.count
         }
     }

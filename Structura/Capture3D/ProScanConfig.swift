@@ -78,7 +78,20 @@ enum ProScanConfig {
     /// the voxel accumulator introduced in a later phase uses the same
     /// constant instead of a second hardcoded copy that could silently
     /// drift from this one.
-    static let voxelSizeMeters: Float = 0.02
+    ///
+    /// Bajado de 2 cm a 1,5 cm cuando la ruta de profundidad pasó a
+    /// alimentar la nube. Este número es el límite real de detalle del
+    /// escaneo: a 2 cm, un pase de 40 s ya producía unas tres observaciones
+    /// por vóxel — es decir, sobraban muestras y faltaba resolución de
+    /// rejilla, y esa rejilla es el "grano" visible en la nube. A 1,5 cm la
+    /// densidad de superficie sube ~1,8x y quedan ~2,8 observaciones por
+    /// celda, que sigue siendo promedio suficiente para que la fusión valga.
+    ///
+    /// No conviene bajarlo mucho más sin más trabajo: por debajo del ruido
+    /// del propio sensor, las celdas dejan de promediar nada y solo se
+    /// multiplica la cuenta de puntos (y el costo de
+    /// `PointCloudDenoiser`, que es O(puntos x vecinos)).
+    static let voxelSizeMeters: Float = 0.015
 
     /// The single source of truth for turning a world-space position into a
     /// voxel-grid cell key, at `voxelSizeMeters` resolution — three 21-bit
@@ -150,10 +163,14 @@ enum ProScanConfig {
     /// `ARPointCloudSession.swift`.
     static let meshVertexStride: Int = 3
 
-    /// Every Nth depth-map pixel is sampled per row/column in the raw
-    /// per-frame pipeline. Matches the value already shipping in
-    /// `ARPointCloudSession.swift`.
-    static let depthPixelStride: Int = 5
+    /// Every Nth depth-map pixel is sampled per row/column in the depth
+    /// pipeline.
+    ///
+    /// Bajado de 5 a 4 junto con `voxelSizeMeters`: una rejilla más fina
+    /// tiene más celdas que llenar, y a stride 5 la cuenta de observaciones
+    /// por celda habría caído por debajo de lo que hace falta para que
+    /// promediar reduzca ruido de verdad.
+    static let depthPixelStride: Int = 4
 
     // MARK: - Ingesta de profundidad (nube densa)
 
