@@ -59,9 +59,13 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
     /// onto it.
     private let meshProcessingQueue = DispatchQueue(label: "com.structura.arpointcloud.mesh", qos: .userInitiated)
 
-    /// Every pixel would be far more data than needed for a live heatmap or
-    /// a reasonably sized export; sample a coarse grid instead.
-    private let pixelStride = 5
+    /// Sampling every depth pixel would be far more data than a 2 cm voxel
+    /// grid can even distinguish; sample a coarse grid instead. Sourced from
+    /// `ProScanConfig` rather than redeclared here — this used to be a second
+    /// hardcoded `5` that could drift from the documented one.
+    private var pixelStride: Int {
+        ProScanConfig.depthPixelStride(forThermalState: ProcessInfo.processInfo.thermalState)
+    }
 
     /// Fixed at `start()` and reused per-frame from a background queue —
     /// reading `UIScreen`/orientation live on every frame would touch
@@ -148,6 +152,30 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
     /// vertices: withdraw the anchor's previous samples, record its new
     /// ones (see `VoxelAccumulator.remove(_:)`).
     private let fusedAccumulator = VoxelAccumulator()
+
+    /// The dense half of the cloud: depth-map samples, fused by voxel.
+    ///
+    /// Separate from `fusedAccumulator` rather than sharing it, because the
+    /// two have opposite retraction semantics. A mesh anchor is
+    /// re-triangulated over and over, so its contribution must be
+    /// *withdrawable* — which is why `meshPointsByAnchor` retains every raw
+    /// mesh sample, and why the final export rebuilds from those to shed
+    /// accumulated floating-point residue. A depth sample is a one-time
+    /// observation that is never revised or removed, so nothing here ever
+    /// needs withdrawing and no raw retention is required: each sample is
+    /// folded into its voxel and dropped.
+    ///
+    /// That distinction is what makes this affordable. The depth stream is
+    /// two orders of magnitude denser than the mesh — retaining raw samples
+    /// the way the mesh path does would cost hundreds of megabytes on a long
+    /// scan, while this stays bounded by *occupied voxels*
+    /// (`ProScanConfig.maximumDepthVoxelCount`).
+    private let depthAccumulator = VoxelAccumulator()
+
+    /// Raw (pre-fusion) count of depth samples folded in, for the live HUD
+    /// only — the same "progress proxy, not the export count" role
+    /// `meshPointCountTotal` plays for the mesh path.
+    private var depthSampleCountTotal = 0
 
     /// Kept in lockstep with `meshPointsByAnchor` (every mutation below
     /// updates both under the same lock) so the coordinator's once-a-second
@@ -247,14 +275,38 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
         defer { Self.signposter.endInterval(signpostName, signpostState) }
 
         meshLock.lock()
-        let fused: [VoxelAccumulator.Sample]
+        // Two sources, fused into one cloud:
+        //
+        //  - the mesh path (ARKit's scene reconstruction), which carries
+        //    real per-face classifications but is a low-resolution surface;
+        //  - the depth path (the LiDAR depth map), which is one to two
+        //    orders of magnitude denser and is what makes the cloud read as
+        //    a surface rather than as scattered dust.
+        //
+        // They are combined through a third accumulator rather than simply
+        // concatenated: wherever both observed the same voxel, concatenating
+        // would emit two coincident points instead of one, inflating the
+        // count with duplicates. Re-fusing collapses those into a single
+        // confidence-weighted point, and lets the mesh path's classification
+        // vote carry into a voxel the depth path could not label.
+        //
+        // This pass is O(occupied voxels), not O(samples ever observed) —
+        // both inputs are already one entry per voxel.
+        let meshFused: [VoxelAccumulator.Sample]
         if authoritative {
-            let rebuilt = VoxelAccumulator.rebuilt(from: meshPointsByAnchor.values.joined())
-            fused = rebuilt.fusedSamples()
+            // See this method's note on the authoritative path: rebuilding
+            // sheds the floating-point residue that repeated
+            // record/withdraw cycles leave in the incremental accumulator.
+            // Only the mesh path accumulates that residue — depth samples
+            // are never withdrawn — so only it needs rebuilding.
+            meshFused = VoxelAccumulator.rebuilt(from: meshPointsByAnchor.values.joined()).fusedSamples()
         } else {
-            fused = fusedAccumulator.fusedSamples()
+            meshFused = fusedAccumulator.fusedSamples()
         }
+        let depthFused = depthAccumulator.fusedSamples()
         meshLock.unlock()
+
+        let fused = VoxelAccumulator.merged(meshFused, depthFused)
 
         return fused.map { sample in
             PointCloudExportPoint(
@@ -274,7 +326,10 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
     func currentMeshPointCount() -> Int {
         meshLock.lock()
         defer { meshLock.unlock() }
-        return meshPointCountTotal
+        // Both paths, since both end up in the exported cloud. Still the
+        // raw pre-fusion total this has always reported: a live progress
+        // proxy, not the (lower, de-duplicated) count the export will hold.
+        return meshPointCountTotal + depthSampleCountTotal
     }
 
     static var isSupported: Bool {
@@ -389,6 +444,8 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
         meshPointsByAnchor.removeAll(keepingCapacity: false)
         fusedAccumulator.reset()
         meshPointCountTotal = 0
+        depthAccumulator.reset()
+        depthSampleCountTotal = 0
         meshLock.unlock()
         confidenceGrid.reset()
         lastProcessedFrameTimestamp = nil
@@ -829,9 +886,26 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
         var positions: [SIMD3<Float>] = []
         var confidences: [Float] = []
         var colors: [SIMD3<Float>] = []
+        // The same points, packaged for the accumulator. Built in this one
+        // pass rather than a second one: the expensive part (unprojection,
+        // color sampling) is already being paid for here.
+        var depthSamples: [VoxelAccumulator.Sample] = []
         positions.reserveCapacity((width / pixelStride) * (height / pixelStride))
         confidences.reserveCapacity(positions.capacity)
         colors.reserveCapacity(positions.capacity)
+        depthSamples.reserveCapacity(positions.capacity)
+
+        // Rotation-only slice of the camera transform, for turning a
+        // camera-space normal into a world-space one. A normal is a
+        // direction, so it must not pick up the transform's translation.
+        let cameraRotation = simd_float3x3(
+            SIMD3<Float>(cameraTransform.columns.0.x, cameraTransform.columns.0.y, cameraTransform.columns.0.z),
+            SIMD3<Float>(cameraTransform.columns.1.x, cameraTransform.columns.1.y, cameraTransform.columns.1.z),
+            SIMD3<Float>(cameraTransform.columns.2.x, cameraTransform.columns.2.y, cameraTransform.columns.2.z)
+        )
+        // Captured once per frame rather than read per pixel — `pixelStride`
+        // reads `ProcessInfo.thermalState`, which is not free.
+        let stride = pixelStride
 
         var y = 0
         while y < height {
@@ -841,7 +915,7 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
             var x = 0
             while x < width {
                 let depth = depthRow[x]
-                guard ProScanConfig.isDepthValid(depth) else { x += pixelStride; continue }
+                guard ProScanConfig.isDepthValid(depth) else { x += stride; continue }
 
                 let confidenceRaw: Float
                 if let confidenceRow, x < confidenceWidth {
@@ -853,13 +927,14 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
                     confidenceRaw = Float(ProScanConfig.maximumConfidenceRawLevel)
                 }
                 let confidence = ProScanConfig.normalizedConfidence(fromRaw: confidenceRaw)
-                guard ProScanConfig.isConfidenceAcceptable(confidence) else { x += pixelStride; continue }
+                guard ProScanConfig.isConfidenceAcceptable(confidence) else { x += stride; continue }
 
                 // Unproject the pixel via the camera's pinhole model, then
                 // transform from camera space into world space.
                 let cameraPoint = CameraUnprojection.unproject(pixel: SIMD2<Float>(Float(x), Float(y)), depth: depth, intrinsics: intrinsics)
-                let worldPoint = cameraTransform * SIMD4<Float>(cameraPoint, 1)
-                confidenceGrid.record(position: SIMD3<Float>(worldPoint.x, worldPoint.y, worldPoint.z), confidence: confidence)
+                let worldPoint4 = cameraTransform * SIMD4<Float>(cameraPoint, 1)
+                let worldPoint = SIMD3<Float>(worldPoint4.x, worldPoint4.y, worldPoint4.z)
+                confidenceGrid.record(position: worldPoint, confidence: confidence)
 
                 let colorX = min(max(Int(Float(x) * colorScaleX), 0), lumaWidth - 1)
                 let colorY = min(max(Int(Float(y) * colorScaleY), 0), lumaHeight - 1)
@@ -869,14 +944,44 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
                     x: colorX, y: colorY
                 )
 
-                positions.append(SIMD3<Float>(worldPoint.x, worldPoint.y, worldPoint.z))
+                positions.append(worldPoint)
                 confidences.append(confidence)
                 colors.append(color)
 
-                x += pixelStride
+                if let cameraNormal = Self.surfaceNormal(
+                    atX: x, y: y,
+                    cameraPoint: cameraPoint,
+                    stride: stride,
+                    width: width, height: height,
+                    depthBuffer: depthBuffer, depthBytesPerRow: depthBytesPerRow,
+                    intrinsics: intrinsics
+                ) {
+                    depthSamples.append(
+                        VoxelAccumulator.Sample(
+                            position: worldPoint,
+                            confidence: confidence,
+                            color: color,
+                            normal: simd_normalize(cameraRotation * cameraNormal),
+                            // ARKit classifies its *mesh* faces, not depth
+                            // pixels, so this point has no label to report —
+                            // which is not the same as reporting "no label".
+                            // See `VoxelAccumulator.unclassifiedRawValue`:
+                            // passing `.none` here would cast a vote for
+                            // "unclassified" and, at this path's density,
+                            // bury every real classification the mesh path
+                            // contributed.
+                            classificationRawValue: VoxelAccumulator.unclassifiedRawValue,
+                            isConfidenceObserved: true
+                        )
+                    )
+                }
+
+                x += stride
             }
-            y += pixelStride
+            y += stride
         }
+
+        ingestDepthSamples(depthSamples)
 
         let viewMatrix = frame.camera.viewMatrix(for: interfaceOrientation)
         let projectionMatrix = frame.camera.projectionMatrix(
@@ -895,6 +1000,91 @@ final class ARPointCloudSession: NSObject, @unchecked Sendable {
             projectionMatrix: projectionMatrix
         )
         onFrame?(processed)
+    }
+
+    /// Surface normal at a depth pixel, from the depth map itself.
+    ///
+    /// Estimated the standard way: unproject this pixel and its right and
+    /// down neighbours, and take the cross product of the two edge vectors
+    /// between them. That is a real measurement of the local surface, not a
+    /// placeholder — which matters because these normals are written into
+    /// the PLY/LAS export, where downstream meshing and rendering depend on
+    /// them. Returns `nil` rather than a made-up direction when either
+    /// neighbour is missing or invalid (depth discontinuity, edge of the
+    /// map), so a point is only given a normal that was actually derived.
+    ///
+    /// Neighbours are taken `stride` pixels away, matching the sampling
+    /// grid: adjacent raw pixels are noisier relative to their tiny
+    /// baseline, which makes the cross product jitter.
+    private static func surfaceNormal(
+        atX x: Int,
+        y: Int,
+        cameraPoint: SIMD3<Float>,
+        stride: Int,
+        width: Int,
+        height: Int,
+        depthBuffer: UnsafeMutablePointer<Float32>,
+        depthBytesPerRow: Int,
+        intrinsics: CameraUnprojection.Intrinsics
+    ) -> SIMD3<Float>? {
+        let rightX = x + stride
+        let downY = y + stride
+        guard rightX < width, downY < height else { return nil }
+
+        let rightDepth = depthBuffer.advanced(by: (y * depthBytesPerRow) / MemoryLayout<Float32>.size)[rightX]
+        let downDepth = depthBuffer.advanced(by: (downY * depthBytesPerRow) / MemoryLayout<Float32>.size)[x]
+        guard ProScanConfig.isDepthValid(rightDepth), ProScanConfig.isDepthValid(downDepth) else { return nil }
+
+        // A large depth jump between neighbours means they sit on different
+        // surfaces (an object's edge against the wall behind it), and the
+        // "surface" through all three is fictional. Scaled with distance
+        // because depth noise grows with range.
+        let discontinuityLimit = max(0.05, -cameraPoint.z * 0.1)
+        guard abs(rightDepth + cameraPoint.z) < discontinuityLimit,
+              abs(downDepth + cameraPoint.z) < discontinuityLimit else { return nil }
+
+        let right = CameraUnprojection.unproject(pixel: SIMD2<Float>(Float(rightX), Float(y)), depth: rightDepth, intrinsics: intrinsics)
+        let down = CameraUnprojection.unproject(pixel: SIMD2<Float>(Float(x), Float(downY)), depth: downDepth, intrinsics: intrinsics)
+
+        let normal = simd_cross(right - cameraPoint, down - cameraPoint)
+        let length = simd_length(normal)
+        guard length > 0, length.isFinite else { return nil }
+        let unit = normal / length
+
+        // Orient toward the camera (which sits at the origin in camera
+        // space, so the direction to it is just `-cameraPoint`). Without
+        // this, whether a normal points into or out of the surface depends
+        // on the handedness of the pixel grid — half the cloud would face
+        // inward.
+        return simd_dot(unit, -simd_normalize(cameraPoint)) < 0 ? -unit : unit
+    }
+
+    /// Folds a frame's depth samples into the dense accumulator.
+    ///
+    /// Hops onto `meshProcessingQueue` rather than doing this inline: the
+    /// caller runs on `delegateQueue`, and taking `meshLock` there for a
+    /// couple of thousand samples would put the accumulator's work directly
+    /// in the path of ARKit's frame delivery — exactly the delegate-queue
+    /// backlog the architecture audit traced the freezing/islanding mesh to
+    /// (finding C4). Reusing the mesh queue rather than adding a third one
+    /// also keeps every mutation of accumulator state serialized against the
+    /// mesh pipeline's, in the order it was produced.
+    private func ingestDepthSamples(_ samples: [VoxelAccumulator.Sample]) {
+        guard !samples.isEmpty else { return }
+        meshProcessingQueue.async { [weak self] in
+            guard let self else { return }
+            self.meshLock.lock()
+            defer { self.meshLock.unlock() }
+
+            // Bounded by occupied voxels, not observations — see
+            // `ProScanConfig.maximumDepthVoxelCount`. Like every other budget
+            // in this pipeline, hitting it stops further ingestion and keeps
+            // everything already captured.
+            guard self.depthAccumulator.observedVoxelCount < ProScanConfig.maximumDepthVoxelCount else { return }
+
+            self.depthAccumulator.record(contentsOf: samples)
+            self.depthSampleCountTotal += samples.count
+        }
     }
 
     /// BT.601 full-range YCbCr → RGB, sampled at a single luma pixel (and

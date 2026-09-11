@@ -17,6 +17,7 @@
 		116B205D6EB864B0F5A2801F /* ScanDriftBudget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC9C883EE708825A3774130C /* ScanDriftBudget.swift */; };
 		1284DB1F16E071E82A12695F /* ARCameraPassthroughView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 330F5779F983960E20FDC350 /* ARCameraPassthroughView.swift */; };
 		148CA1CE2CBE42BDFECCCEE8 /* PointCloudRaycastTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C169CC49A0329771A7CD9DB5 /* PointCloudRaycastTests.swift */; };
+		1609138DA2C673F831503AB3 /* DenseCloudFusionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E834BA97E64ECB5090773DB6 /* DenseCloudFusionTests.swift */; };
 		17CD09B7037351681495A209 /* RequirementsBlockedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8202E7C38C6DDEE8741B3CE /* RequirementsBlockedView.swift */; };
 		180945F275C37DEE6D5E454F /* TopographicAxisConvention.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39CCA3B1E575B48104612FDB /* TopographicAxisConvention.swift */; };
 		1B3AA021ACE8F57B60250A0C /* SystemScanRequirementsProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C1070839221B867AABC600B /* SystemScanRequirementsProbe.swift */; };
@@ -232,6 +233,7 @@
 		E579F3F6F700D7CBA583130B /* PLYPointCloudReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PLYPointCloudReader.swift; sourceTree = "<group>"; };
 		E78D94B24D2AB18DA74DD4D3 /* RoomCaptureRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomCaptureRepresentable.swift; sourceTree = "<group>"; };
 		E7A2A901EC583E7E87B2FC19 /* AngularVelocityGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AngularVelocityGate.swift; sourceTree = "<group>"; };
+		E834BA97E64ECB5090773DB6 /* DenseCloudFusionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DenseCloudFusionTests.swift; sourceTree = "<group>"; };
 		E9AE11DBB56EE92B5291A229 /* SketchBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchBackdrop.swift; sourceTree = "<group>"; };
 		EBAF40F0AD07E417D2B06870 /* PurchaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseManager.swift; sourceTree = "<group>"; };
 		EE8539560292F05A011D44BB /* FloorPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorPlan.swift; sourceTree = "<group>"; };
@@ -422,6 +424,7 @@
 				D3154D5AD72B0748B64663A4 /* ConfidenceGridTests.swift */,
 				037614FED6FB7CDAAEE397A2 /* ControlPointTransformTests.swift */,
 				591BEB81B6DEF966A5F214F2 /* DelegateFrameMetricsTests.swift */,
+				E834BA97E64ECB5090773DB6 /* DenseCloudFusionTests.swift */,
 				57D3A6FD72ECD1414D454478 /* FloorPlanRegistrationTests.swift */,
 				2D90AF1927E076EB7FF58516 /* LASExporterTests.swift */,
 				974B4A9218725836CE01FD19 /* MeasurementCalibrationTests.swift */,
@@ -605,6 +608,7 @@
 				1BC6DD4B091DD660414A23C6 /* ControlPointTransformTests.swift in Sources */,
 				2830507F17C08E68985794C2 /* DelegateFrameMetrics.swift in Sources */,
 				E19F93C3F6BB43BFC94359D1 /* DelegateFrameMetricsTests.swift in Sources */,
+				1609138DA2C673F831503AB3 /* DenseCloudFusionTests.swift in Sources */,
 				FA7C5B718BBCF3BCA6929CBF /* FloorPlanRegistration.swift in Sources */,
 				58E1A30A8D70DB236AB13DAC /* FloorPlanRegistrationTests.swift in Sources */,
 				C37E083C998838898C4C8A6C /* LASExporter.swift in Sources */,

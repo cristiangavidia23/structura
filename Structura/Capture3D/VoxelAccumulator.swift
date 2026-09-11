@@ -246,6 +246,55 @@ final class VoxelAccumulator {
         return accumulator
     }
 
+    /// Classification raw value meaning **"this sample has no opinion"**, as
+    /// distinct from `.none`, which means "observed, and unclassified".
+    ///
+    /// The distinction became load-bearing when the LiDAR depth path started
+    /// feeding the cloud: ARKit classifies scene-*mesh* faces, not depth
+    /// pixels, so a depth sample simply has no label to report. Letting it
+    /// carry `.none` would have made it a *vote* for "unclassified" — and
+    /// since the depth path is one to two orders of magnitude denser than
+    /// the mesh path, those non-votes would have outvoted and erased every
+    /// real wall/floor/ceiling/door label ARKit did produce, across the
+    /// whole export.
+    ///
+    /// Deliberately outside the range `voteLane(for:)` accepts, so a sample
+    /// carrying it is excluded from the tally by the mechanism already there
+    /// for unrecognized values, rather than by a second special case. It
+    /// never reaches an export: `majorityClassification(from:)` only ever
+    /// returns a real lane, falling back to `.none` for a voxel where
+    /// nobody had an opinion — which is the honest answer for a point only
+    /// the depth path ever saw.
+    static let unclassifiedRawValue: UInt8 = .max
+
+    /// Fuses two already-fused sample sets into one.
+    ///
+    /// Exists because Pro Scan accumulates from two independent sources —
+    /// ARKit's scene mesh and the LiDAR depth map (see
+    /// `ARPointCloudSession`) — which observe overlapping space. Simply
+    /// concatenating them would emit two coincident points wherever both saw
+    /// the same voxel, inflating the point count with duplicates that no
+    /// downstream consumer could tell from real, distinct geometry.
+    ///
+    /// Re-recording through a fresh accumulator collapses those pairs into
+    /// one confidence-weighted point, and lets a classification observed by
+    /// only one source (the mesh path labels faces; the depth path cannot)
+    /// still win its voxel's vote.
+    ///
+    /// O(voxels in the two inputs), not O(samples ever observed): both
+    /// inputs already hold one entry per voxel.
+    static func merged(_ first: [Sample], _ second: [Sample]) -> [Sample] {
+        // Fusing a set with nothing would still round-trip every sample
+        // through a rebuild for no change; skip that.
+        if second.isEmpty { return first }
+        if first.isEmpty { return second }
+
+        let combined = VoxelAccumulator()
+        combined.record(contentsOf: first)
+        combined.record(contentsOf: second)
+        return combined.fusedSamples()
+    }
+
     /// Maps a raw classification byte to its tally lane, or `nil` for a
     /// value outside the eight ARKit defines — an unknown byte is not
     /// counted rather than silently folded into `.none`, so a future ARKit

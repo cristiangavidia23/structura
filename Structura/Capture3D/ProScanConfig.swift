@@ -115,15 +115,23 @@ enum ProScanConfig {
 
     // MARK: - Sampling cadence
 
-    /// Target rate for the raw per-frame depth pipeline (the confidence/
-    /// coverage signal only — never the export path; see
-    /// `ARPointCloudSession`'s mesh-vs-depth split). ARKit delivers frames
-    /// at up to 60 Hz; running full unprojection at that rate on the CPU is
-    /// unnecessary once the fused mesh is the actual export source, and was
-    /// identified in the Pro Scan audit as a real contributor to
-    /// delegate-queue backlog. 6 Hz keeps a confidence sample roughly every
-    /// 160 ms — frequent enough for a coverage HUD, far cheaper than 60 Hz.
-    static let depthSampleHz: Double = 6.0
+    /// Target rate for the per-frame depth pipeline.
+    ///
+    /// This rate used to be justified as "a confidence/coverage signal
+    /// only, never the export path" — 6 Hz was plenty for a coverage HUD.
+    /// That reasoning no longer holds: the depth stream is now folded into
+    /// the accumulated cloud itself (see `ARPointCloudSession.processFrame`),
+    /// which makes it the *dense* source of the export, not a side signal.
+    /// Every frame skipped here is geometry never captured.
+    ///
+    /// 12 Hz is the compromise: at a normal hand-sweep pace (~0.3 m/s) that
+    /// puts successive frames roughly one voxel apart, so a sweep leaves no
+    /// gap, while still being a fraction of ARKit's 60 Hz — the delegate-
+    /// queue backlog the audit flagged is real, and the unprojection loop is
+    /// the expensive part of it. An engineering placeholder: the
+    /// coverage-versus-thermals curve this should be read off has not been
+    /// measured on real hardware yet.
+    static let depthSampleHz: Double = 12.0
 
     /// Every Nth mesh vertex is kept when extracting an `ARMeshAnchor`'s
     /// geometry. Matches the value already shipping in
@@ -134,6 +142,41 @@ enum ProScanConfig {
     /// per-frame pipeline. Matches the value already shipping in
     /// `ARPointCloudSession.swift`.
     static let depthPixelStride: Int = 5
+
+    // MARK: - Ingesta de profundidad (nube densa)
+
+    /// Ceiling on distinct occupied voxels retained from depth ingestion,
+    /// above which further depth frames are dropped.
+    ///
+    /// This is the bound that actually matters for depth: individual depth
+    /// samples are folded into their voxel and never retained separately,
+    /// so memory tracks *occupied voxels*, not observations. A 2 cm voxel
+    /// only ever holds surfaces, so a room lands in the low hundreds of
+    /// thousands; this leaves room for a whole floor before it engages.
+    ///
+    /// Like `maximumMeshPointBudget`, a deliberately conservative fixed
+    /// number rather than a live `os_proc_available_memory()` reading —
+    /// and, like it, it stops *further ingestion* instead of discarding
+    /// what has already been captured. Provisional until profiled on a
+    /// real long scan.
+    static let maximumDepthVoxelCount: Int = 1_200_000
+
+    /// Under thermal pressure, widen the depth-map stride for the same
+    /// reason `meshVertexStride(forThermalState:)` does — fewer samples per
+    /// frame instead of an ever-climbing load that would push ARKit's own
+    /// tracking quality down with it.
+    static func depthPixelStride(forThermalState state: ProcessInfo.ThermalState) -> Int {
+        switch state {
+        case .nominal, .fair:
+            return depthPixelStride
+        case .serious:
+            return depthPixelStride * 2
+        case .critical:
+            return depthPixelStride * 3
+        @unknown default:
+            return depthPixelStride
+        }
+    }
 
     // MARK: - Session duration
 
