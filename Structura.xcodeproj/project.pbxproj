@@ -555,11 +555,11 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					1113C1962D694EF97AC02BE7 = {
-						DevelopmentTeam = WREX368LLS;
+						DevelopmentTeam = X4AZJ3DWHB;
 						ProvisioningStyle = Automatic;
 					};
 					94CA7CF704526B65A5B788B7 = {
-						DevelopmentTeam = WREX368LLS;
+						DevelopmentTeam = X4AZJ3DWHB;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -752,7 +752,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = WREX368LLS;
+				DEVELOPMENT_TEAM = X4AZJ3DWHB;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -775,7 +775,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = WREX368LLS;
+				DEVELOPMENT_TEAM = X4AZJ3DWHB;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Structura/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -796,7 +796,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = WREX368LLS;
+				DEVELOPMENT_TEAM = X4AZJ3DWHB;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -938,7 +938,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = WREX368LLS;
+				DEVELOPMENT_TEAM = X4AZJ3DWHB;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Structura/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

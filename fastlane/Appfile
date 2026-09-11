@@ -17,9 +17,11 @@ app_identifier(ENV["STRUCTURA_APP_IDENTIFIER"].to_s.empty? ? "com.cristiangavidi
 #   export STRUCTURA_APPLE_ID="tu-correo@ejemplo.com"
 apple_id(ENV["STRUCTURA_APPLE_ID"]) unless ENV["STRUCTURA_APPLE_ID"].to_s.empty?
 
-# Team ID de Xcode (Apple Developer Program) — coincide con `DEVELOPMENT_TEAM`
-# en project.yml. Ya lo tenemos: WREX368LLS.
-team_id("WREX368LLS")
+# Team ID de Xcode (Apple Developer Program) — debe coincidir siempre con
+# `DEVELOPMENT_TEAM` en project.yml, que es de donde sale la firma de la
+# build que este lane termina subiendo. Si aquí quedara un equipo distinto,
+# el .ipa se firmaría con uno y se subiría contra otro.
+team_id("X4AZJ3DWHB")
 
 # Team ID de App Store Connect (distinto del de Xcode si la cuenta
 # pertenece a más de un equipo — para una cuenta individual suelen

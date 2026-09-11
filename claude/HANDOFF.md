@@ -29,7 +29,7 @@ esto desde una sesión nueva de Claude Code, arrancá por acá.
    xcodegen generate
    ```
 3. **Compilar e instalar en el iPhone de Cristian.** Abrir `Structura.xcodeproj`, elegir el
-   iPhone como destino, Run. Firma automática con el team `WREX368LLS` ya está configurada en
+   iPhone como destino, Run. Firma automática con el team `X4AZJ3DWHB` ya está configurada en
    `project.yml`.
 4. **El paywall está desactivado a propósito para pruebas** —
    `Structura/Purchases/PurchaseManager.swift`, `isPaywallDisabledForTesting = true`. Es un

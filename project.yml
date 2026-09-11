@@ -50,7 +50,17 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         GENERATE_INFOPLIST_FILE: false
-        DEVELOPMENT_TEAM: WREX368LLS
+        # El equipo de Apple Developer de Cristian.
+        #
+        # **Este archivo es el único lugar donde se cambia.** `xcodegen
+        # generate` reescribe project.pbxproj entero desde acá, así que un
+        # equipo elegido a mano en Xcode se pierde en la siguiente
+        # regeneración — sin aviso, y el síntoma no aparece hasta después,
+        # como una build que de golpe ya no firma. Eso es exactamente lo que
+        # venía pasando: este valor decía WREX368LLS (un equipo distinto,
+        # heredado del commit inicial) y cada regeneración pisaba el equipo
+        # correcto configurado en Xcode.
+        DEVELOPMENT_TEAM: X4AZJ3DWHB
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
@@ -113,7 +123,8 @@ targets:
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         GENERATE_INFOPLIST_FILE: true
         CODE_SIGN_STYLE: Automatic
-        DEVELOPMENT_TEAM: WREX368LLS
+        # Mismo equipo que la app — ver la nota en el target Structura.
+        DEVELOPMENT_TEAM: X4AZJ3DWHB
 
 schemes:
   Structura:
